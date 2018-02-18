@@ -1,0 +1,57 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+
+# Over time plot
+# olympplot %>% 
+#   ggplot(aes(x = Year, y = medal_yr_cnt)) +
+#   geom_line(aes(color = Country)) +
+#   labs(x = "Year", y = "# Medals Won") +
+#   theme_light() 
+
+# olympplot2 %>%  
+#   ggplot(aes(x = Year, y = medal_yr_cnt, na.rm = TRUE)) +
+#   geom_line(aes(color = Country)) +
+#   labs(x = "Year", y = "# Medals Won") +
+#   facet_wrap(~Medal) +
+#   theme_light() 
+
+# olympplot3 <- olymp %>% 
+#   group_by(Country) %>% 
+#   summarize(total_medals = length(Medal)) %>% 
+#   filter(total_medals >= 100)
+# olympplot3 %>% 
+#   ggplot(aes(x = reorder(Country, total_medals), y = total_medals)) +
+#   geom_bar(aes(fill = Country, color = Country), stat = "identity")
+
+
+# sports <- olymp %>% 
+#   mutate(Medal = factor(Medal, levels = c("Gold", "Silver", "Bronze"))) %>%
+#   group_by(Country, Sport, Medal) %>% 
+#   mutate(medal_sport_cnt = length(Medal)) %>%
+#   select(Country, Medal, Sport, medal_sport_cnt) %>%
+#   unique() %>% 
+#   spread(key = Medal, value = medal_sport_cnt) %>% 
+#   ungroup() %>% 
+#   select(Country, Sport, Gold, Silver, Bronze)
+# sports[is.na(sports)] <- 0
+# sports$total_medals <- rowSums(sports[, c(3,4,5)])
+# 
+# sports2 <- olymp %>% 
+#   mutate(Medal = factor(Medal, levels = c("Gold", "Silver", "Bronze"))) %>%
+#   group_by(Country, Sport, Medal) %>% 
+#   mutate(medal_sport_cnt = length(Medal)) %>%
+#   select(Country, Medal, Sport, medal_sport_cnt) %>%
+#   unique() 
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
