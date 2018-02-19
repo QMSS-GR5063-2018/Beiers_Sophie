@@ -1,7 +1,7 @@
 # Winter Olympics: 1924 - 2014
-The purpose of this project was to visualize different aspects of medal-winners from the winter Olympics games between 1924 and 2014. Visualizations were created primarily using ggplot2, plotly and HighCharter.
+The purpose of this project was to visualize different aspects of medal-winners from the winter Olympics games between 1924 and 2014. Visualizations were created primarily using ggplot2, plotly and HighCharter. For code and all visualizations, please see the [Rmd](.hw1/docs/Beiers_Olympics.Rmd) file and the "docs" folder. For further explanation of each visualization, please see the [HTML](.hw1/output/Beiers_Olympics.html) document and the "output" folder. The present README.md file is only to serve as an outline of the repository and a summary of key visualizations.
 
-This folder is organized as follows. Please see each subfolder for a README.md file.
+This repository is organized as follows. Please see each subfolder for a README.md file.
 
 ```
 proj/
@@ -23,13 +23,15 @@ The main data contains the following variables on all medal winners in all winte
   - `Gender`: gender of the athlete  
   - `Medal`: type of medal won
 
-Additional data about the countries is available in a separate spreadsheet including the `IOC Country	Code`, `Population`, and `GDP per capita`.
+Additional data about the countries is available in a separate dataset including the `IOC Country	Code`, `Population`, and `GDP per capita`.
 
 (For the purposes of this homework assignment, data will *not* be included in the current repository).
 
 ## Highlights
-### Medal Counts Over Time
+
 #### Number of Winter Olympics Each Country Medaled In
+Below is a summary of the number of winter Olympics games each country medaled in.
+
 ![](./hw1/images/unnamed-chunk-2-1.png)
 
 (Bottom Medal-Winning Countries)
@@ -40,7 +42,7 @@ To visualize how many medals the top 10 medal-winning countries won over the 192
 
 ![](./hw1/images/unnamed-chunk-5-1.png)
 
-#### Overall Medals Won
+#### Medals Won Overall
 Below is a visualization of the total number of gold, silver and bronze medals won by each country. Only countries that have won at least 100 medals total were included.
 
 ![](./hw1/images/unnamed-chunk-6-2.png)
@@ -51,13 +53,13 @@ Below is a visualization of the total number of gold, silver and bronze medals w
 ![](./hw1/images/unnamed-chunk-11-1.png)
 
 ### Host Country Advantage
- It’s clear from the visualization that most countries do exceedingly better, if not, at least as good as they’ve ever done, when they host.
+ It’s clear from the visualizations that most countries do exceedingly better, if not, at least as good as they’ve ever done, when they host.
 
 ![](./hw1/images/unnamed-chunk-13-1.png)
 ![](./hw1/images/unnamed-chunk-14-1.png)
 
 ### Country Success by Sport
-The top ten medal-winning countries happen to be best at Skiing and Skating sports as indicated by the darker blues.
+The top ten medal-winning countries happen to be best at Skiing and Skating sports as indicated by the darker blues. Germany, Norway and Russia seem to outperform the other countries in Biathlon, specifically, and Germany is talented in the Luge.
 
 ![](./hw1/images/unnamed-chunk-17-1.png)
 
@@ -75,4 +77,4 @@ For interactive plots, please see the [HTML File](.hw1/output/Beiers_Olympics).
 
 
 ## References
-Some ideas and code were borrowed from [Hadley's GGPlot2 Book](https://github.com/hadley/ggplot2-book), Thomas Brambor (Professor, Columbia University), as well as [this](https://rstudio.github.io/DT/) resource for interactive data tables and [this](http://jkunst.com/highcharter/) resource for highcharter plots. Information regarding Olympics Games primarily came from [Wikipedia](https://en.wikipedia.org/wiki/All-time_Olympic_Games_medal_table). 
+Some ideas and code were borrowed from [Hadley's GGPlot2 Book](https://github.com/hadley/ggplot2-book), Thomas Brambor (Professor, Columbia University), as well as [this](https://rstudio.github.io/DT/) resource for interactive data tables and [this](http://jkunst.com/highcharter/) resource for highcharter plots. Information regarding Olympics Games primarily came from [Wikipedia](https://en.wikipedia.org/wiki/All-time_Olympic_Games_medal_table).
