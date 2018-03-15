@@ -391,14 +391,10 @@ leaflet(options = leafletOptions(minZoom = 8)) %>%
 
 ### 4. Distance from Firehouse and Response Time
 
-I then investigated whether the distance of the incident from the nearest firehouse varied across the city. For all incident locations, I identified the nearest firehouse and calculated the distance between the firehouse and the incident location. 
-
-#### a. Scatterplots 
+I then investigated whether the distance of the incident from the nearest firehouse varied across the city. For all incident locations, I identified the nearest firehouse and calculated the distance between the firehouse and the incident location. Below is a look at the dataframe generated with the fire station deemed closest to the incident and the calculated approximate distance (mi). 
 
 ```{r}
-#### calculate distances 
 library(geosphere)
-library(ggthemes)
 
 # firehouse locations lat, lon
 fh_loc <- locs[ , 3:4]
@@ -442,56 +438,21 @@ full_fire <- merge(x = firehouse_incidents, y = fireprop, by = "IM_INCIDENT_KEY"
 full_fire$INCIDENT_DATE_TIME <- strptime(full_fire$INCIDENT_DATE_TIME, "%m/%d/%Y %I:%M:%S %p")
 full_fire$ARRIVAL_DATE_TIME <- strptime(full_fire$ARRIVAL_DATE_TIME, "%m/%d/%Y %I:%M:%S %p")
 
-full_fire$diff_time <- as.numeric(difftime(full_fire$ARRIVAL_DATE_TIME, full_fire$INCIDENT_DATE_TIME, tz = "EST", units = "mins"))
+full_fire$diff_time <- as.numeric(difftime(full_fire$ARRIVAL_DATE_TIME, 
+                                           full_fire$INCIDENT_DATE_TIME, 
+                                           tz = "EST", 
+                                           units = "mins"))
+full_fire <- merge(x = locs, y = full_fire, by.x = 0, by.y = "nearest_fh_ID", all = TRUE)
+head(full_fire %>% 
+       select(IM_INCIDENT_KEY, Borough, FacilityName, distance))
+
 ```
 
-```{r}
-### Scatterplots
-#colors = colorRampPalette(brewer.pal(9, "YlOrRd"))(colorCount)
-ggplot(full_fire, aes(x = reorder(PROPERTY_USE_DESC, diff_time), y = diff_time)) +
-  geom_point(aes(color = diff_time)) + 
-  scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
-  #scale_color_manual(values=c("#FFFFCC", "#FFF3B0", "#FEE896", "#FEDC7C", "#FEC662", "#FDAF4A", "#FD9840", #"#FC7936", "#FC522B", "#EE3222", "#DD151D", "#C50523", "#A50026", "#800026")) +
-  labs(y = "Arrival Time (min)", x = '',
-       title = "NYC Fire Responders: 2015", 
-       subtitle = "Arrival times to incidents by property type") +
-  coord_flip() +
-  theme_tufte() +
-  theme(legend.position = "none")
-```
-
+#### a. Scatterplots 
+First, I visualized a simple scatterplot to see the general distribution of responsiveness. Overall, incidents are responded to quite quickly in NYC with most firefighters arriving at the scene within 10 minutes. I noticed one extreme outlier (an incident that took over an hour to arrive to in an open field) so eliminated that one point for more meaningful insights. 
 
 ```{r}
-full_fire$BOROUGH_DESC <-substring(full_fire$BOROUGH_DESC, 5)
-ggplot(full_fire, aes(x = as.factor(BOROUGH_DESC), y = diff_time)) +
-  geom_point(aes(color = diff_time)) + 
-  scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
-  labs(y = "Arrival Time (min)", x = "",
-       title = "NYC Fire Responders: 2015", 
-       subtitle = "Arrival times to incidents by NYC borough: Bronx the place to be") +
-  coord_flip() +
-  theme_tufte() +
-  theme(legend.position = "none")
-```
-
-It doesn't seem like there's much variation in the time it takes fire trucks to get to the incident, even when looking at how far the nearest station is from the property. 
-
-```{r}
-ggplot(full_fire, aes(x = distance, y = diff_time)) +
-  geom_point(aes(color = diff_time)) + 
-  scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
-  labs(y = "Arrival Time (min)", 
-       x = "Distance from Nearest Fire Station (mi)",
-       title = "NYC Fire Responders: 2015", 
-       subtitle = "Arrival times quick & stable regardless of distance to incident") +
-  #coord_flip() +
-  theme_tufte() +
-  theme(legend.position = "none")
-```
-
-
-```{r}
-ggplot(full_fire, aes(x = IM_INCIDENT_KEY, y = diff_time)) +
+ggplot(full_fire[!(full_fire$diff_time > 40), ], aes(x = IM_INCIDENT_KEY, y = diff_time)) +
   geom_point(aes(color = diff_time)) + 
   scale_color_gradientn(colors = rev(brewer.pal(4,"YlOrRd"))) +
   labs(y = "Arrival Time (min)", 
@@ -505,6 +466,52 @@ ggplot(full_fire, aes(x = IM_INCIDENT_KEY, y = diff_time)) +
   theme(legend.position = "none")
 ```
 
+Next, I looked at whether arrival times differed depending on the property type. I thought units would be more responsive to homes/residences in general, but it turns out there's not much of a difference in how quickly rescuers arrive based on property type. There were a few more incidences of rescuers arriving to fires in open fields and highways a bit later than they would at a residence or restaurant -- though, based on this scatterplot, a restaurant/bar would be the place to be in a fire in terms of reliability of firefighters arrivals.
+
+```{r}
+library(ggthemes)
+#colors = colorRampPalette(brewer.pal(9, "YlOrRd"))(colorCount)
+ggplot(data = full_fire[!(full_fire$diff_time > 40|is.na(full_fire$PROPERTY_USE_DESC)), ], aes(x = reorder(PROPERTY_USE_DESC, diff_time), y = diff_time)) +
+  geom_point(aes(color = diff_time)) + 
+  scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
+  #scale_color_manual(values=c("#FFFFCC", "#FFF3B0", "#FEE896", "#FEDC7C", "#FEC662", "#FDAF4A", "#FD9840", #"#FC7936", "#FC522B", "#EE3222", "#DD151D", "#C50523", "#A50026", "#800026")) +
+  labs(y = "Arrival Time (min)", x = '',
+       title = "NYC Fire Responders: 2015", 
+       subtitle = "Arrival times to incidents by property type") +
+  coord_flip() +
+  theme_tufte() +
+  theme(legend.position = "none")
+```
+
+Next, I visualized firefighter arrival times to incidents by NYC burrough. Again, there's not too much variation between the boroughs but there are a few incidents in Staten Island, Queens and Manhattan that were long waits for help. 
+
+```{r}
+full_fire$BOROUGH_DESC <-substring(full_fire$BOROUGH_DESC, 5)
+ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$BOROUGH_DESC)), ], aes(x = as.factor(BOROUGH_DESC), y = diff_time)) +
+  geom_point(aes(color = diff_time)) + 
+  scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
+  labs(y = "Arrival Time (min)", x = "",
+       title = "NYC Fire Responders: 2015", 
+       subtitle = "Arrival times to incidents by NYC borough: Bronx the place to be") +
+  coord_flip() +
+  theme_tufte() +
+  theme(legend.position = "none")
+```
+
+I wanted to see whether distance from one's nearest firehouse mattered in terms of how quickly responders arrive to the scene. Oddly, it doesn't seem like distance to a fire station matters in terms of how fast help will arrive. Luckily, in NYC nobody is more than 0.65 miles away from a fire station, so I wonder if I'd see a larger difference in a city/suburb with fewer stations.
+
+```{r}
+ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x = distance, y = diff_time)) +
+  geom_point(aes(color = diff_time)) + 
+  scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
+  labs(y = "Arrival Time (min)", 
+       x = "Distance from Nearest Fire Station (mi)",
+       title = "NYC Fire Responders: 2015", 
+       subtitle = "Arrival times quick & stable regardless of distance to incident") +
+  #coord_flip() +
+  theme_tufte() +
+  theme(legend.position = "none")
+```
 
 #### b. Response Times
 
