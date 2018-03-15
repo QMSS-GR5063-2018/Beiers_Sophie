@@ -1,20 +1,32 @@
 ---
 title: "Assignment 2: Mapping Fire Incidents and FDNY Response Times"
-author: Thomas Brambor
-date: 2017-03-07
+author: Sophie Beiers
+date: 03-21-18
 always_allow_html: yes
 output: 
   html_document:
     keep_md: true
     code_folding: hide
+    toc: true
+    toc_float: true
+    theme: lumen
+    highlight: tango
 ---
 
 Fires in NYC and FDNY Response
 ================================
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-setwd("~/Dropbox/QMSS/Data Visualization/Beiers_Sophie/hw2")
+knitr::opts_chunk$set(fig.path="../images/",
+                      fig.show='hold',
+                      fig.align='center',
+                      cache.path="cache/",
+                      cache=FALSE,
+                      echo=TRUE,
+                      message=FALSE,
+                      warning=FALSE,
+                      eval = TRUE) 
+setwd("~/Dropbox/QMSS/Data Visualization/Beiers_Sophie/hw2/docs")
 library(ggmap)
 ```
 
@@ -55,14 +67,14 @@ NYC Open Data has data on all [incidents responded to by fire companies](https:/
 This dataset is only updated annually, and thus far only data from 2013 to 2015 is contained. The following analyses are run using just 2015 data and only the most severe fires (Level 7).
 
 ```{r, eval=FALSE}
+# data manipulation (by Thomas Brambor)
 fire <- read_csv("./data/Incidents_Responded_to_by_Fire_Companies.csv") 
 fire$year <- substr(fire$INCIDENT_DATE_TIME, 7, 10)
 fire <- fire%>% 
   filter(HIGHEST_LEVEL_DESC == "7 - Signal 7-5") %>%
   filter(year==2015)
-```
 
-```{r, eval=FALSE}
+
 # Geocoding data
 # Make list of addresses
 address <- str_c( str_to_title(fire$STREET_HIGHWAY),
@@ -147,14 +159,14 @@ Out of curiosity, I created a heatmap of the same most severe incidents to inves
 incident_map <- get_map(location = c(lon = -73.935242, lat = 40.730610), maptype = "toner-lite", zoom = 10)
 ggmap(incident_map) + 
  geom_density2d(aes(x = Longitude, y = Latitude), 
-  data = full_fire, 
+  data = fire, 
   color="blue", 
   size=0.5, 
   bins=10) +
   stat_density2d(aes(x = Longitude, y = Latitude,
     fill = ..level.., 
     alpha = ..level..),
-    data = full_fire, 
+    data = fire, 
     geom = 'polygon', 
     bins = 10,
     show.legend = FALSE) +
@@ -170,9 +182,9 @@ ggmap(incident_map) +
 #### a. Leaflet Map: Property Type
 
 Beginning with the previous leaflet map, I distinguished the markers of the fire locations by `PROPERTY_USE_DESC`, i.e. what kind of property was affected. There were many categories of properties, so I rounded them down as much as possible while still providing interesting information. Information about the property type as well the same details about the incidents are recorded in interactive popups. 
-
 ```{r}
-##### Data Cleaning
+### Data Cleaning
+
 fire$PROPERTY_USE_DESC <- substring(fire$PROPERTY_USE_DESC, 7) # rid of numbers before prop name
 tab <- as.data.frame(table(fire$PROPERTY_USE_DESC)) # table to get frequency
 colnames(tab) <-  c("PROPERTY_USE_DESC", "Freq")
@@ -244,11 +256,8 @@ fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Undetermined"] <- "Other
 fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Industrial plant yard - area"] <- "Other"
 fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Church, mosque, synagogue, temple, chapel"] <- "Other"
 fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Construction site"] <- "Other"
-```
 
-
-```{r}
-##### Map
+### Map
 # create order of factor based on how many incidents occured in that type of property
 fireprop$PROPERTY_USE_DESC <- factor((fireprop$PROPERTY_USE_DESC), levels = c("Hospital", "Transit Station", "School", "Hotel/Motel", "Gas Station/Vehicle Repair", "Warehouse/Storage", "Parking Garage", "Business Office", "Restaurant/Bar", "Open Land/Field", "Street/Highway", "Other", "Mercantile Business", "Residential Home"))
 #colors <- c("#08519c", "#3182bd", "#6baed6", "#9ecae1", "#c6dbef", "#ffffcc", "#ffeda0", "#fed976", #"#feb24c", "#fd8d3c", "#fc4e2a", "#e31a1c", "#bd0026", "#800026")
@@ -273,9 +282,9 @@ leaflet(data = fireprop, options = leafletOptions(minZoom = 9)) %>%
   addCircles(lat = ~Latitude, lng = ~Longitude, 
              color = colors, 
              weight = 5,
-             opacity = 0.8,
+             opacity = 0.7,
              fill = TRUE,
-             fillOpacity = 0.8,
+             fillOpacity = 0.5,
              popup = content ) %>% 
   addLegend("bottomright", 
             colors = c("#FFFFCC", "#FFF3B0", "#FEE896", "#FEDC7C", "#FEC662", "#FDAF4A", "#FD9840", "#FC7936", "#FC522B", "#EE3222", "#DD151D", "#C50523","#A50026","#800026"), 
@@ -285,11 +294,13 @@ leaflet(data = fireprop, options = leafletOptions(minZoom = 9)) %>%
 
 
 #colors = c("#08519c", "#3182bd", "#6baed6", "#9ecae1", "#c6dbef", "#ffffcc", "#ffeda0", "#fed976", #"#feb24c", "#fd8d3c", "#fc4e2a", "#e31a1c", "#bd0026", "#800026") # blue/red
-```
 
+
+```
 #### b. Clusters
 
 I added marker clustering, so that zooming in reveals the individual locations but the zoomed out map only shows the clusters.
+
 
 ```{r}
 leaflet(data = fireprop, options = leafletOptions(minZoom = 10)) %>% 
@@ -354,8 +365,8 @@ leaflet(options = leafletOptions(minZoom = 8)) %>%
   addCircleMarkers(data = fireprop, 
                    lat = ~Latitude, lng = ~Longitude, 
                    color = color,
-                   opacity = 0.9,
-                   fillOpacity = 0.8,
+                   opacity = 0.8,
+                   fillOpacity = 0.7,
                    weight = 1,
                    radius = ~fireprop$UNITS_ONSCENE/2, # make radius smaller
                    popup = content, 
@@ -378,7 +389,6 @@ leaflet(options = leafletOptions(minZoom = 8)) %>%
 
 ```
 
-
 ### 4. Distance from Firehouse and Response Time
 
 I then investigated whether the distance of the incident from the nearest firehouse varied across the city. For all incident locations, I identified the nearest firehouse and calculated the distance between the firehouse and the incident location. 
@@ -388,7 +398,6 @@ I then investigated whether the distance of the incident from the nearest fireho
 ```{r}
 #### calculate distances 
 library(geosphere)
-library(ggmap)
 library(ggthemes)
 
 # firehouse locations lat, lon
@@ -416,16 +425,6 @@ set10 <- inc_loc[1918:2130, ]
 set11 <- rbind(inc_loc[2131:2319, ], inc_loc[1:24,])
 
 sets <- list(set1, set2, set3, set4, set5, set6, set7, set8, set9, set10, set11)
-# firehouses_sp <- SpatialPoints(fh_loc)
-# df <- NULL
-# for (i in sets) {
-#   incidents_sp <- SpatialPoints(i) 
-#   i$nearest_fh_ID <- apply(gDistance(incidents_sp, firehouses_sp, byid = TRUE), 
-#                            1, which.min)
-#   i$distance <- round(apply(gDistance(incidents_sp, firehouses_sp, byid = TRUE), 
-#                       1, min), 4)
-#   df<-rbind(df,i)
-# }
 
 df <- NULL
 for (i in sets) {
@@ -447,7 +446,7 @@ full_fire$diff_time <- as.numeric(difftime(full_fire$ARRIVAL_DATE_TIME, full_fir
 ```
 
 ```{r}
-##### Scatterplots
+### Scatterplots
 #colors = colorRampPalette(brewer.pal(9, "YlOrRd"))(colorCount)
 ggplot(full_fire, aes(x = reorder(PROPERTY_USE_DESC, diff_time), y = diff_time)) +
   geom_point(aes(color = diff_time)) + 
@@ -460,6 +459,8 @@ ggplot(full_fire, aes(x = reorder(PROPERTY_USE_DESC, diff_time), y = diff_time))
   theme_tufte() +
   theme(legend.position = "none")
 ```
+
+
 ```{r}
 full_fire$BOROUGH_DESC <-substring(full_fire$BOROUGH_DESC, 5)
 ggplot(full_fire, aes(x = as.factor(BOROUGH_DESC), y = diff_time)) +
@@ -487,6 +488,8 @@ ggplot(full_fire, aes(x = distance, y = diff_time)) +
   theme_tufte() +
   theme(legend.position = "none")
 ```
+
+
 ```{r}
 ggplot(full_fire, aes(x = IM_INCIDENT_KEY, y = diff_time)) +
   geom_point(aes(color = diff_time)) + 
