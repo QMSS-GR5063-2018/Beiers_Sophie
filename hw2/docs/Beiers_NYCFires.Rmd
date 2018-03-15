@@ -32,7 +32,7 @@ library(ggmap)
 
 ## Overview
 
-For this project, I investigate serious incidents requiring the fire department to respond. Using data about the locations of firehouses and fires occurring in New York City, I investigate whether response times to fires differ across the city. Second, I focus on whether the distance from the firehouse effects response times to the scene.
+For this project, I use NYC Open Data to alleviate my anxieties about living on the top floor of an apartment building and investigate serious incidents requiring the fire department to respond. Using data about the locations of Fire Stations and fires occurring in New York City, I look into whether response times to fires differ across the city. Lastly, I focus on whether the distance from the Fire Station affects response times to the scene.
 
 ## Data
 
@@ -96,17 +96,17 @@ fire$Longitude <- latlong$lon
 write_csv(fire, "severe_incidents.csv")
 ```
 
-### FDNY Firehouse Listing
+### FDNY Fire Station Listing
 
-NYC Open Data also provides data on the [location of all 218 firehouses in NYC](https://data.cityofnewyork.us/Public-Safety/FDNY-Firehouse-Listing/hc8x-tcnd). Relevant for our analyses are the following variables:
+NYC Open Data also provides data on the [location of all 218 Fire Stations in NYC](https://data.cityofnewyork.us/Public-Safety/FDNY-Firehouse-Listing/hc8x-tcnd). Relevant for our analyses are the following variables:
 
     FacilityName, Borough, Latitude, Longitude
 
 ```{r, warning = F, message = F}
 # Read in both datasets 
 library(tidyverse)
-fire <- read_csv("./data/severe_incidents.csv") 
-locs <- read_csv("./data/FDNY_Firehouse_Listing.csv") 
+fire <- read_csv("../data/severe_incidents.csv") 
+locs <- read_csv("../data/FDNY_Firehouse_Listing.csv") 
 locs <- locs %>% 
   select(FacilityName, Borough, Latitude, Longitude)
 ```
@@ -115,7 +115,7 @@ locs <- locs %>%
 ### 1. Location of Severe Fires
 #### a. Leaflet Map: Incidents
 
-Below is a `leaflet` map of the severe fires contained in the file `severe_incidents.csv`. Fires that occured at locations outside the five boroughs of New York City were excluded. The type of incident, date and time of incident, where the fire spread, the number of firemen/women units that came onto scene, whether a detector was present and the total duration of the incident are available as information in interactive popups. 
+Below is a `leaflet` map of the severe fires contained in the file `severe_incidents.csv`. Fires that occurred at locations outside the five boroughs of New York City were excluded. The type of incident, date and time of incident, where the fire spread, the number of firemen/women units that came onto scene, whether a detector was present and the total duration of the incident are available as information in interactive popups. 
 
 ```{r}
 library(leaflet)
@@ -135,7 +135,7 @@ content <- paste("What:",fire$INCIDENT_TYPE_DESC,"<br/>",
                  "Fire Dectector Status:", fire$DETECTOR_PRESENCE_DESC, "<br/>")
 
 fireIcons <- icons(
-  iconUrl = "./fire.png",
+  iconUrl = "../images/fire.png",
   iconWidth = 8, iconHeight = 11
   #iconAnchorX = 22, iconAnchorY = 94
 )
@@ -181,7 +181,7 @@ ggmap(incident_map) +
 
 #### a. Leaflet Map: Property Type
 
-Beginning with the previous leaflet map, I distinguished the markers of the fire locations by `PROPERTY_USE_DESC`, i.e. what kind of property was affected. There were many categories of properties, so I rounded them down as much as possible while still providing interesting information. Information about the property type as well the same details about the incidents are recorded in interactive popups. 
+Beginning with the previous leaflet map, I distinguished the markers of the fire locations by `PROPERTY_USE_DESC`, i.e. what kind of property was affected. There were many categories of properties, so I rounded them down as much as possible while still providing interesting information. Information about the property type as well the same details about the incidents are recorded in interactive popups. AND I changed the map to black for dramatic effect.  
 ```{r}
 ### Data Cleaning
 
@@ -306,7 +306,7 @@ I added marker clustering, so that zooming in reveals the individual locations b
 leaflet(data = fireprop, options = leafletOptions(minZoom = 10)) %>% 
   setView(lat = 40.730610, lng = -73.935242, zoom = 10) %>%
   addTiles() %>% 
-  addProviderTiles("CartoDB.Positron") %>% 
+  addProviderTiles("CartoDB.DarkMatter") %>% 
   addCircleMarkers(lat = ~Latitude, lng = ~Longitude, 
                    color = colors, 
                    popup = content, 
@@ -320,9 +320,9 @@ leaflet(data = fireprop, options = leafletOptions(minZoom = 10)) %>%
 ```
 
 
-### 3. Fire Houses
+### 3. Fire Stations
 
-Next, I adjusted the initial leaflet map such that the size of the circle markers indicate severity (by the number of units that came on to the scene) and colors indicated the length of time the fire persisted. Firehouse locations were also added. There are two layers to the map ("Incidents", "Firehouses") that allow the user to select which information to show. 
+Next, I adjusted the initial leaflet map such that the size of the circle markers indicate severity (by the number of units that came on to the scene) and colors indicated the length of time the fire persisted. Fire station locations were also added. There are two layers to the map ("Incidents", "Firehouses") that allow the user to select which information to show. 
 
 ```{r}
 # colors
@@ -375,7 +375,7 @@ leaflet(options = leafletOptions(minZoom = 8)) %>%
              lat = ~Latitude, lng = ~Longitude, 
              popup = loc_content,
              icon = firehouseIcons,
-             group = "Firehouses") %>% 
+             group = "Fire Stations") %>% 
    addLegend("bottomright", 
             colors = c("#FFFFB2", "#FECC5C", "#FD8D3C", "#F03B20", "#BD0026"), 
             values = ~fireprop$brks, 
@@ -384,19 +384,19 @@ leaflet(options = leafletOptions(minZoom = 8)) %>%
                             "2-2.5 hrs", ">2.5 hrs")) %>% 
   addLayersControl(
     baseGroups = "New York City",
-    overlayGroups = c("Incidents", "Firehouses"))
+    overlayGroups = c("Incidents", "Fire Stations"))
 
 
 ```
 
-### 4. Distance from Firehouse and Response Time
+### 4. Distance from Fire Station and Response Time
 
-I then investigated whether the distance of the incident from the nearest firehouse varied across the city. For all incident locations, I identified the nearest firehouse and calculated the distance between the firehouse and the incident location. Below is a look at the dataframe generated with the fire station deemed closest to the incident and the calculated approximate distance (mi). 
+I then investigated whether the distance of the incident from the nearest Fire Station varied across the city. For all incident locations, I identified the nearest Fire Station and calculated the distance between the Fire Station and the incident location. Below is a look at the dataframe generated with the fire station deemed closest to the incident and the calculated approximate distance (mi). 
 
 ```{r}
 library(geosphere)
 
-# firehouse locations lat, lon
+# Fire Station locations lat, lon
 fh_loc <- locs[ , 3:4]
 colnames(fh_loc) <- c("lat", "lon")
 fh_loc <- na.omit(fh_loc)
@@ -406,7 +406,7 @@ inc_loc <- fire[ , c(25:26,1)]
 colnames(inc_loc) <- c("lat", "lon", "IM_INCIDENT_KEY")
 inc_loc <- na.omit(inc_loc)
 
-# calculating distance between incident and nearest firehouse
+# calculating distance between incident and nearest Fire Station
 # break up into chunks of 213 due to issues with dfs being different sizes
 set1 <- inc_loc[1:213, ]
 set2 <- inc_loc[214:426, ]
@@ -449,9 +449,10 @@ head(full_fire %>%
 ```
 
 #### a. Scatterplots 
-First, I visualized a simple scatterplot to see the general distribution of responsiveness. Overall, incidents are responded to quite quickly in NYC with most firefighters arriving at the scene within 10 minutes. I noticed one extreme outlier (an incident that took over an hour to arrive to in an open field) so eliminated that one point for more meaningful insights. 
+First, I visualized a simple scatter plot to see the general distribution of responsiveness. Overall, incidents are responded to quite quickly in NYC with most firefighters arriving at the scene within 10 minutes. I noticed one extreme outlier (an incident that took over an hour to arrive to in an open field) so eliminated that one point for more meaningful insights. 
 
 ```{r}
+library(ggthemes)
 ggplot(full_fire[!(full_fire$diff_time > 40), ], aes(x = IM_INCIDENT_KEY, y = diff_time)) +
   geom_point(aes(color = diff_time)) + 
   scale_color_gradientn(colors = rev(brewer.pal(4,"YlOrRd"))) +
@@ -466,10 +467,10 @@ ggplot(full_fire[!(full_fire$diff_time > 40), ], aes(x = IM_INCIDENT_KEY, y = di
   theme(legend.position = "none")
 ```
 
-Next, I looked at whether arrival times differed depending on the property type. I thought units would be more responsive to homes/residences in general, but it turns out there's not much of a difference in how quickly rescuers arrive based on property type. There were a few more incidences of rescuers arriving to fires in open fields and highways a bit later than they would at a residence or restaurant -- though, based on this scatterplot, a restaurant/bar would be the place to be in a fire in terms of reliability of firefighters arrivals.
+Next, I looked at whether arrival times differed depending on the property type. I thought units would be more responsive to homes/residences in general, but it turns out there's not much of a difference in how quickly rescuers arrive based on property type. There were a few more incidences of rescuers arriving to fires in open fields and highways a bit later than they would at a residence or restaurant -- though, based on this scatter plot, a restaurant/bar would be the place to be in a fire in terms of reliability of firefighters arrivals.
 
 ```{r}
-library(ggthemes)
+
 #colors = colorRampPalette(brewer.pal(9, "YlOrRd"))(colorCount)
 ggplot(data = full_fire[!(full_fire$diff_time > 40|is.na(full_fire$PROPERTY_USE_DESC)), ], aes(x = reorder(PROPERTY_USE_DESC, diff_time), y = diff_time)) +
   geom_point(aes(color = diff_time)) + 
@@ -483,7 +484,7 @@ ggplot(data = full_fire[!(full_fire$diff_time > 40|is.na(full_fire$PROPERTY_USE_
   theme(legend.position = "none")
 ```
 
-Next, I visualized firefighter arrival times to incidents by NYC burrough. Again, there's not too much variation between the boroughs but there are a few incidents in Staten Island, Queens and Manhattan that were long waits for help. 
+Next, I visualized firefighter arrival times to incidents by NYC borough. Again, there's not too much variation between the boroughs but there are a few incidents in Staten Island, Queens and Manhattan that were long waits for help. 
 
 ```{r}
 full_fire$BOROUGH_DESC <-substring(full_fire$BOROUGH_DESC, 5)
@@ -498,7 +499,7 @@ ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$BOROUGH_DESC)), ], a
   theme(legend.position = "none")
 ```
 
-I wanted to see whether distance from one's nearest firehouse mattered in terms of how quickly responders arrive to the scene. Oddly, it doesn't seem like distance to a fire station matters in terms of how fast help will arrive. Luckily, in NYC nobody is more than 0.65 miles away from a fire station, so I wonder if I'd see a larger difference in a city/suburb with fewer stations.
+I wanted to see whether distance from one's nearest Fire Station mattered in terms of how quickly responders arrive to the scene. Oddly, it doesn't seem like distance to a fire station matters in terms of how fast help will arrive. Luckily, in NYC nobody is more than 0.65 miles away from a fire station, so I wonder if I'd see a larger difference in a city/suburb with fewer stations.
 
 ```{r}
 ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x = distance, y = diff_time)) +
@@ -515,18 +516,18 @@ ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x
 
 #### b. Response Times
 
-Lastly, I created a map visualization of response times to the incidents. I differentiated by distance from the nearest firehouse and colored incidents by the duration of the incident. 
+Lastly, I created a map visualization of response times to the incidents. I differentiated by the incident's distance from the nearest Fire Station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!). This relieved my anxieties more than anything else, but, nothing too interesting is gleaned from this visualization. Length of a fire must depend on other aspects I didn't have access to in this dataset. 
 
 ```{r}
 # categories of distance to fire station
 full_fire$distance_rd <- ifelse(full_fire$distance < .25, 
-                                "Less Than Quarter Mile", 
+                                "Closer Than Quarter Mile", 
                                 full_fire$distance)
 full_fire$distance_rd <- ifelse(full_fire$distance >= .25 & full_fire$distance < .50, 
-                                "Less Than Half Mile", 
+                                "Between Quarter & Half Mile", 
                                 full_fire$distance_rd)
 full_fire$distance_rd <- ifelse(full_fire$distance  >= .5, 
-                                "Over Half Mile", 
+                                "Further Than Half Mile", 
                                 full_fire$distance_rd)
 
 # breaks in fire length
@@ -546,7 +547,9 @@ ggmap(incident_map) +
                      palette = "YlOrRd", 
                      direction = 1, 
                      guide = "legend") +
-  labs(x = '', y = '') +
+  labs(x = '', y = '', 
+       title = "NYC Fire Incidents & Proximity to Nearest Fire Station", 
+       subtitle = "2015") +
   theme_tufte() +
   theme(axis.text = element_blank()) +
   theme(axis.ticks = element_blank()) +
@@ -555,5 +558,4 @@ ggmap(incident_map) +
   theme(legend.position = "right")
   
 ```
-
 
