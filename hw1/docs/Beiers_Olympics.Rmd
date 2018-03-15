@@ -18,7 +18,7 @@ output:
 knitr::opts_chunk$set(fig.path="../images/",
                cache.path="cache/",
                cache=FALSE,
-               echo=FALSE,
+               echo=TRUE,
                message=FALSE,
                warning=FALSE,
                eval = TRUE ) 
