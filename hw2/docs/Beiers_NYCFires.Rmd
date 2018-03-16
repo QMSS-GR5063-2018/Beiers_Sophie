@@ -127,12 +127,12 @@ fire$FIRE_SPREAD_DESC <- substring(fire$FIRE_SPREAD_DESC, 5)
 fire$DETECTOR_PRESENCE_DESC <- substring(fire$DETECTOR_PRESENCE_DESC, 5)
 fire$TOTAL_INCIDENT_DURATION <- round(fire$TOTAL_INCIDENT_DURATION/60, 2) # convert to minutes
 
-content <- paste("What:",fire$INCIDENT_TYPE_DESC,"<br/>",
-                 "When:",fire$INCIDENT_DATE_TIME,"<br/>",
-                 "Location:",fire$FIRE_SPREAD_DESC,"<br/>",
-                 "Length of Incident (min):", fire$TOTAL_INCIDENT_DURATION, "<br/>",
-                 "Number of Units On Scene:",fire$UNITS_ONSCENE,"<br/>",
-                 "Fire Dectector Status:", fire$DETECTOR_PRESENCE_DESC, "<br/>")
+content <- paste("<b>What:</b>",fire$INCIDENT_TYPE_DESC,"<br/>",
+                 "<b>When</b>:",fire$INCIDENT_DATE_TIME,"<br/>",
+                 "<b>Location</b>:",fire$FIRE_SPREAD_DESC,"<br/>",
+                 "<b>Length of Incident (min)</b>:", fire$TOTAL_INCIDENT_DURATION, "<br/>",
+                 "<b>Number of Units On Scene</b>:",fire$UNITS_ONSCENE,"<br/>",
+                 "<b>Fire Dectector Status</b>:", fire$DETECTOR_PRESENCE_DESC, "<br/>")
 
 fireIcons <- icons(
   iconUrl = "../images/fire.png",
@@ -266,13 +266,13 @@ colors = colorRampPalette(brewer.pal(9, "YlOrRd"))(colorCount)
 
 # popups
 
-content <- paste("What:",fireprop$INCIDENT_TYPE_DESC,"<br/>",
-                 "When:",fireprop$INCIDENT_DATE_TIME,"<br/>",
-                 "Where:",fireprop$PROPERTY_USE_DESC,"<br/>", # added where
-                 "Location:",fireprop$FIRE_SPREAD_DESC,"<br/>",
-                 "Length of Incident (min):", fireprop$TOTAL_INCIDENT_DURATION, "<br/>",
-                 "Number of Units On Scene:",fireprop$UNITS_ONSCENE,"<br/>",
-                 "Fire Dectector Status:", fireprop$DETECTOR_PRESENCE_DESC, "<br/>")
+content <- paste("<b>What:</b>",fireprop$INCIDENT_TYPE_DESC,"<br/>",
+                 "<b>When:</b>",fireprop$INCIDENT_DATE_TIME,"<br/>",
+                 "<b>Where:</b>",fireprop$PROPERTY_USE_DESC,"<br/>", # added where
+                 "<b>Location:</b>",fireprop$FIRE_SPREAD_DESC,"<br/>",
+                 "<b>Length of Incident (min):</b>", fireprop$TOTAL_INCIDENT_DURATION, "<br/>",
+                 "<b>Number of Units On Scene:</b>",fireprop$UNITS_ONSCENE,"<br/>",
+                 "<b>Fire Dectector Status:</b>", fireprop$DETECTOR_PRESENCE_DESC, "<br/>")
 
 # map -- starting with other map but changed data source 
 leaflet(data = fireprop, options = leafletOptions(minZoom = 9)) %>% 
@@ -341,19 +341,18 @@ firehouseIcons <- icons(
 )
 
 # popup content
-# popups
 
-content <- paste("What:",fireprop$INCIDENT_TYPE_DESC,"<br/>",
-                 "When:",fireprop$INCIDENT_DATE_TIME,"<br/>",
-                 "Where:",fireprop$PROPERTY_USE_DESC,"<br/>", # added where
-                 "Location:",fireprop$FIRE_SPREAD_DESC,"<br/>",
-                 "Length of Incident:", fireprop$brks, "<br/>",
-                 "Number of Units On Scene:",fireprop$UNITS_ONSCENE,"<br/>",
-                 "Fire Dectector Status:", fireprop$DETECTOR_PRESENCE_DESC, "<br/>")
+content <- paste("<b>What:</b>",fireprop$INCIDENT_TYPE_DESC,"<br/>",
+                 "<b>When:</b>",fireprop$INCIDENT_DATE_TIME,"<br/>",
+                 "<b>Where:</b>",fireprop$PROPERTY_USE_DESC,"<br/>", # added where
+                 "<b>Location:</b>",fireprop$FIRE_SPREAD_DESC,"<br/>",
+                 "<b>Length of Incident:</b>", fireprop$brks, "<br/>",
+                 "<b>Number of Units On Scene:</b>",fireprop$UNITS_ONSCENE,"<br/>",
+                 "<b>Fire Dectector Status:</b>", fireprop$DETECTOR_PRESENCE_DESC, "<br/>")
  
 # new content for firehouse popups
-loc_content <- paste("Facility Name:",locs$FacilityName,"<br/>",
-                     "Borough:", locs$Borough, "<br/>")
+loc_content <- paste("<b>Facility Name:</b>",locs$FacilityName,"<br/>",
+                     "<b>Borough:</b>", locs$Borough, "<br/>")
 
 
                  
