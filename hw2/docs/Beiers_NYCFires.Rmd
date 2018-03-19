@@ -121,6 +121,12 @@ Below is a `leaflet` map of the severe fires contained in the file `severe_incid
 library(leaflet)
 library(RColorBrewer)
 
+# rid of outliers 
+outliers <- filter(fire,Latitude == 40.4520226 & Longitude == -74.8161585|Latitude == 40.7436253 & Longitude == -73.6580927|Latitude == 40.701487 & Longitude == -73.349799|Latitude == 40.9206623  & Longitude == -73.787364|Latitude == 40.9179949   & Longitude == -73.8956178)
+
+fire <- fire[!(fire$IM_INCIDENT_KEY %in% outliers$IM_INCIDENT_KEY),]
+
+
 # popups
 fire$INCIDENT_TYPE_DESC <- substring(fire$INCIDENT_TYPE_DESC, 7) # rid of numbers 
 fire$FIRE_SPREAD_DESC <- substring(fire$FIRE_SPREAD_DESC, 5)
@@ -132,13 +138,17 @@ content <- paste("<b>What:</b>",fire$INCIDENT_TYPE_DESC,"<br/>",
                  "<b>Location</b>:",fire$FIRE_SPREAD_DESC,"<br/>",
                  "<b>Length of Incident (min)</b>:", fire$TOTAL_INCIDENT_DURATION, "<br/>",
                  "<b>Number of Units On Scene</b>:",fire$UNITS_ONSCENE,"<br/>",
-                 "<b>Fire Dectector Status</b>:", fire$DETECTOR_PRESENCE_DESC, "<br/>")
+                 "<b>Fire Dectector Status</b>:", fire$DETECTOR_PRESENCE_DESC, "<br/>",
+                 "<b>Fire Dectector Status</b>:", fire$Latitude, "<br/>",
+                 "<b>Fire Dectector Status</b>:", fire$Longitude, "<br/>")
 
 fireIcons <- icons(
   iconUrl = "../images/fire.png",
   iconWidth = 8, iconHeight = 11
   #iconAnchorX = 22, iconAnchorY = 94
 )
+# legend
+html_legend <- "2015 NYC Fires<br> <img src= 'http://icons.iconarchive.com/icons/fatcow/farm-fresh/16/fire-icon.png'> "
 
 # map 
 leaflet(data = fire, options = leafletOptions(minZoom = 10)) %>% 
@@ -146,7 +156,8 @@ leaflet(data = fire, options = leafletOptions(minZoom = 10)) %>%
   addTiles() %>% 
   addProviderTiles("CartoDB.Positron") %>% 
   addMarkers(lat = ~Latitude, lng = ~Longitude, 
-             icon = fireIcons, popup = content)
+             icon = fireIcons, popup = content) %>% 
+  addControl(html = html_legend, position = "bottomright")
 
 
 ```
@@ -194,32 +205,23 @@ fireprop$PROPERTY_USE_DESC <- ifelse(fireprop$Freq < 3, "Other", fireprop$PROPER
 ## Renaming and Classifying
 
 # Open spaces
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Open land or field"] <- "Open Land/Field"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Outside or special property, other"] <- "Open Land/Field"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Dock, marina, pier, wharf"] <- "Open Land/Field"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Forest, timberland, woodland"] <- "Open Land/Field"
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Open land or field"|fireprop$PROPERTY_USE_DESC=="Outside or special property, other"|fireprop$PROPERTY_USE_DESC=="Dock, marina, pier, wharf"|fireprop$PROPERTY_USE_DESC=="Forest, timberland, woodland"] <- "Open Land/Field"
+
 
 # schools
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Schools, non-adult, other"] <- "School"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Adult education center, college classroom"] <- "School"
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Schools, non-adult, other"|fireprop$PROPERTY_USE_DESC=="Adult education center, college classroom"] <- "School"
+
 
 # residential spaces
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Residential, other"] <- "Residential Home"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Multifamily dwelling"] <- "Residential Home"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="1 or 2 family dwelling"] <- "Residential Home"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Dormitory-type residence, other"] <- "Residential Home"
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Residential, other"|fireprop$PROPERTY_USE_DESC=="1 or 2 family dwelling"|fireprop$PROPERTY_USE_DESC=="Multifamily dwelling"|fireprop$PROPERTY_USE_DESC=="Dormitory-type residence, other"] <- "Residential Home"
+
 
 # streets
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Street, other"] <- "Street/Highway"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Residential street, road or residential driveway"] <- "Street/Highway"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Street or road in commercial area"] <- "Street/Highway"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Railroad right-of-way"] <- "Street/Highway"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Highway or divided highway"] <- "Street/Highway"
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Street, other"|fireprop$PROPERTY_USE_DESC=="Residential street, road or residential driveway"|fireprop$PROPERTY_USE_DESC=="Street or road in commercial area"|fireprop$PROPERTY_USE_DESC=="Railroad right-of-way"|fireprop$PROPERTY_USE_DESC=="Highway or divided highway"] <- "Street/Highway"
 
 # parking garages
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Parking garage, (detached residential garage)"] <- "Parking Garage"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Vehicle parking area"] <- "Parking Garage"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Vehicle storage, other"] <- "Parking Garage"
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Parking garage, (detached residential garage)"| fireprop$PROPERTY_USE_DESC=="Vehicle parking area"|fireprop$PROPERTY_USE_DESC=="Vehicle storage, other"] <- "Parking Garage"
+
 
 # hotels
 fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Hotel/motel, commercial"] <- "Hotel/Motel"
@@ -236,33 +238,42 @@ fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Food and beverage sales,
 fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Convenience store"] <- "Mercantile Business"
 
 # restaurants
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Restaurant or cafeteria"] <- "Restaurant/Bar"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Eating, drinking places, other"] <- "Restaurant/Bar"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Bar or nightclub"] <- "Restaurant/Bar"
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Restaurant or cafeteria"|fireprop$PROPERTY_USE_DESC=="Eating, drinking places, other"|fireprop$PROPERTY_USE_DESC=="Bar or nightclub"] <- "Restaurant/Bar"
 
 # warehouses
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Property Use, other"] <- "Warehouse/Storage"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Storage, other"] <- "Warehouse/Storage"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Warehouse"] <- "Warehouse/Storage"
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Property Use, other"|fireprop$PROPERTY_USE_DESC=="Storage, other"|fireprop$PROPERTY_USE_DESC=="Warehouse"] <- "Warehouse/Storage"
 
 # others
 fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Hospital - medical or psychiatric"] <- "Hospital"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Motor vehicle or boat sales, services, repair"] <- "Gas Station/Vehicle Repair"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Service station, gas station"] <- "Gas Station/Vehicle Repair"
+
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Motor vehicle or boat sales, services, repair"|fireprop$PROPERTY_USE_DESC=="Service station, gas station"] <- "Gas Station/Vehicle Repair"
+
 fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Rapid transit station"] <- "Transit Station"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Manufacturing, processing"] <- "Other"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Outbuilding or shed"] <- "Other"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Undetermined"] <- "Other"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Industrial plant yard - area"] <- "Other"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Church, mosque, synagogue, temple, chapel"] <- "Other"
-fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Construction site"] <- "Other"
+
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Manufacturing, processing"|fireprop$PROPERTY_USE_DESC=="Outbuilding or shed"| fireprop$PROPERTY_USE_DESC=="Undetermined"| fireprop$PROPERTY_USE_DESC=="Industrial plant yard - area"] <- "Other"
+
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Church, mosque, synagogue, temple, chapel"] <- "Religious Facilities"
+fireprop$PROPERTY_USE_DESC[fireprop$PROPERTY_USE_DESC=="Construction site"] <- "Construction Site"
+
+outdoors <- c("Open Land/Field", "Street/Highway")
+civic <- c( "School", "Parking Garage", "Religious Facilities", "Transit Station", "Hospital", "Construction Site", "Warehouse/Storage")
+residential <- c("Residential Home")
+commercial <- c("Restaurant/Bar","Hotel/Motel","Gas Station/Vehicle Repair", "Mercantile Business", "Business Office")
+other <- c("Other")
+
+# round down categories 
+fireprop$property <- ifelse(fireprop$PROPERTY_USE_DESC %in% residential, "Residential", 0)  
+fireprop$property <- ifelse(fireprop$PROPERTY_USE_DESC %in% civic , "Civic", fireprop$property)
+fireprop$property <- ifelse(fireprop$PROPERTY_USE_DESC %in% commercial, "Commercial", fireprop$property)
+fireprop$property <- ifelse(fireprop$PROPERTY_USE_DESC %in% outdoors, "Outdoors", fireprop$property)
+fireprop$property <- ifelse(fireprop$PROPERTY_USE_DESC %in% other, "Other", fireprop$property)
 
 ### Map
 # create order of factor based on how many incidents occured in that type of property
-fireprop$PROPERTY_USE_DESC <- factor((fireprop$PROPERTY_USE_DESC), levels = c("Hospital", "Transit Station", "School", "Hotel/Motel", "Gas Station/Vehicle Repair", "Warehouse/Storage", "Parking Garage", "Business Office", "Restaurant/Bar", "Open Land/Field", "Street/Highway", "Other", "Mercantile Business", "Residential Home"))
-#colors <- c("#08519c", "#3182bd", "#6baed6", "#9ecae1", "#c6dbef", "#ffffcc", "#ffeda0", "#fed976", #"#feb24c", "#fd8d3c", "#fc4e2a", "#e31a1c", "#bd0026", "#800026")
-colorCount <- length(unique(fireprop$PROPERTY_USE_DESC)) # number of levels
-colors = colorRampPalette(brewer.pal(9, "YlOrRd"))(colorCount)
+fireprop$property <- factor((fireprop$property), levels = c("Residential", "Commercial", "Civic", "Outdoors", "Other"))
+colorCount <- length(unique(fireprop$property)) # number of levels
+#colors = colorRampPalette(brewer.pal(5, "Dark2"))(colorCount)
+colors = c("#800026","#E31A1C", "#FD8D3C","#FED976","#ffffff")
 
 # popups
 
@@ -287,20 +298,15 @@ leaflet(data = fireprop, options = leafletOptions(minZoom = 9)) %>%
              fillOpacity = 0.5,
              popup = content ) %>% 
   addLegend("bottomright", 
-            colors = c("#FFFFCC", "#FFF3B0", "#FEE896", "#FEDC7C", "#FEC662", "#FDAF4A", "#FD9840", "#FC7936", "#FC522B", "#EE3222", "#DD151D", "#C50523","#A50026","#800026"), 
-            values = ~fireprop$PROPERTY_USE_DESC, 
+            colors = c("#800026","#E31A1C", "#FD8D3C","#FED976","#ffffff"), 
+            values = ~fireprop$property, 
             title = "Incident Property Type",
-            labels = c("Hospital", "Transit Station", "School", "Hotel/Motel", "Gas Station/Vehicle Repair", "Warehouse/Storage", "Parking Garage", "Business Office", "Restaurant/Bar", "Open Land/Field", "Street/Highway", "Other", "Mercantile Business", "Residential Home"))
-
-
-#colors = c("#08519c", "#3182bd", "#6baed6", "#9ecae1", "#c6dbef", "#ffffcc", "#ffeda0", "#fed976", #"#feb24c", "#fd8d3c", "#fc4e2a", "#e31a1c", "#bd0026", "#800026") # blue/red
-
+            labels = c("Residential", "Commercial", "Civic", "Outdoors", "Other"))
 
 ```
 #### b. Clusters
 
 I added marker clustering, so that zooming in reveals the individual locations but the zoomed out map only shows the clusters.
-
 
 ```{r}
 leaflet(data = fireprop, options = leafletOptions(minZoom = 10)) %>% 
@@ -312,10 +318,10 @@ leaflet(data = fireprop, options = leafletOptions(minZoom = 10)) %>%
                    popup = content, 
                    clusterOptions = markerClusterOptions()) %>% 
   addLegend("bottomright", 
-            colors = c("#FFFFCC", "#FFF3B0", "#FEE896", "#FEDC7C", "#FEC662", "#FDAF4A", "#FD9840", "#FC7936", "#FC522B", "#EE3222", "#DD151D", "#C50523","#A50026","#800026"), 
-            values = ~fireprop$PROPERTY_USE_DESC, 
+            colors = c("#FFFFCC", "#FED976", "#FD8D3C", "#E31A1C", "#800026"), 
+            values = ~fireprop$property, 
             title = "Incident Property Type",
-            labels = c("Hospital", "Transit Station", "School", "Hotel/Motel", "Gas Station/Vehicle Repair", "Warehouse/Storage", "Parking Garage", "Business Office", "Restaurant/Bar", "Open Land/Field", "Street/Highway", "Other", "Mercantile Business", "Residential Home"))
+            labels = c("Residential", "Commercial", "Civic", "Outdoors", "Other"))
 
 ```
 
@@ -447,7 +453,7 @@ head(full_fire %>%
 
 ```
 
-#### a. Scatterplots 
+#### a. Plots 
 First, I visualized a simple scatter plot to see the general distribution of responsiveness. Overall, incidents are responded to quite quickly in NYC with most firefighters arriving at the scene within 10 minutes. I noticed one extreme outlier (an incident that took over an hour to arrive to in an open field) so eliminated that one point for more meaningful insights. 
 
 ```{r}
@@ -481,18 +487,17 @@ ggplot(data = full_fire[!(full_fire$diff_time > 40|is.na(full_fire$PROPERTY_USE_
   coord_flip() +
   theme_tufte() +
   theme(legend.position = "none")
+
 ```
 
 Next, I visualized firefighter arrival times to incidents by NYC borough. Again, there's not too much variation between the boroughs but there are a few incidents in Staten Island, Queens and Manhattan that were long waits for help. 
 
 ```{r}
-full_fire$BOROUGH_DESC <-substring(full_fire$BOROUGH_DESC, 5)
-ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$BOROUGH_DESC)), ], aes(x = as.factor(BOROUGH_DESC), y = diff_time)) +
-  geom_point(aes(color = diff_time)) + 
-  scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
+ggplot(full_fire[!is.na(full_fire$BOROUGH_DESC), ], aes(x = as.factor(BOROUGH_DESC), y = diff_time)) +
+  geom_violin(aes(fill = BOROUGH_DESC, alpha = 0.8)) + 
   labs(y = "Arrival Time (min)", x = "",
        title = "NYC Fire Responders: 2015", 
-       subtitle = "Arrival times to incidents by NYC borough: Bronx the place to be") +
+       subtitle = "Arrival times to incidents by NYC borough: Bronx & Brooklyn the places to be") +
   coord_flip() +
   theme_tufte() +
   theme(legend.position = "none")
@@ -511,11 +516,12 @@ ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x
   #coord_flip() +
   theme_tufte() +
   theme(legend.position = "none")
+
 ```
 
 #### b. Response Times
 
-Lastly, I created a map visualization of response times to the incidents. I differentiated by the incident's distance from the nearest Fire Station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!). This relieved my anxieties more than anything else, but, nothing too interesting is gleaned from this visualization. Length of a fire must depend on other aspects I didn't have access to in this dataset. 
+Lastly, I created map visualizations of response times to the incidents. I differentiated by the incident's distance from the nearest Fire Station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!). This relieved my anxieties more than anything else, but, nothing too interesting is gleaned from this visualization. Length of a fire must depend on other aspects I didn't have access to in this dataset. 
 
 ```{r}
 # categories of distance to fire station
@@ -555,6 +561,51 @@ ggmap(incident_map) +
   facet_wrap(~distance_rd, nrow = 1, drop = TRUE) +
   theme(strip.background = element_rect(fill = "#ffff99")) +
   theme(legend.position = "right")
+  
+```
+
+```{r}
+library(rgdal)
+
+nyc_bor <- readOGR("../data/nybb_18a/.", "nybb")
+nyc_bor <- spTransform(nyc_bor, 
+                          CRS("+proj=longlat +datum=WGS84"))
+nyc_bor <- fortify(nyc_bor)
+
+nyc_bor$id[nyc_bor$id == 0] <- "Staten Island"
+nyc_bor$id[nyc_bor$id == 1] <- "Manhatten"
+nyc_bor$id[nyc_bor$id == 2] <- "Bronx"
+nyc_bor$id[nyc_bor$id == 3] <- "Brooklyn"
+nyc_bor$id[nyc_bor$id == 4] <- "Queens"
+nyc_bor$Borough <- nyc_bor$id
+
+
+map_zip <- get_map("New York City", zoom=10, 
+                      source="stamen",maptype="toner-background")
+
+ggmap(map_zip) + 
+    geom_polygon(aes(fill = Borough, x = long, y = lat, group = group), 
+                 data = nyc_bor,
+                 alpha = 0.8, 
+                 color = "black",
+                 size = 0.2) +
+    geom_point(data = full_fire[!is.na(full_fire$distance_rd), ], 
+               aes(x = lon, y = lat, color = brks),
+                 alpha = 0.5, 
+                 size = 0.3) +
+  scale_color_brewer(name = "Length of Fire:", 
+                     type = "seq", 
+                     palette = "YlOrRd", 
+                     direction = 1, 
+                     guide = "legend") +
+    labs(x = '', y = '', 
+       title = "NYC Fire Incidents & Proximity to Nearest Fire Station", 
+       subtitle = "By Borough: 2015") +
+  theme_tufte() +
+  theme(axis.text = element_blank()) +
+  theme(axis.ticks = element_blank())
+
+
   
 ```
 
