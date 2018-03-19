@@ -11,7 +11,7 @@ proj/
 ```
 
 ## Data
-NYC Open Data has data on all incidents responded to by fire stations. For the purposes of this project, only data from 2015 regarding the most severe incidents were used. The following variables are available:
+NYC Open Data has data on all incidents responded to by fire stations. For the purposes of this project, only data from 2015 regarding the most severe incidents were used. Data is not provided in the Github. The following variables are available:
 
   - `IM_INCIDENT_KEY`:	Unique identifier for each incident which serves
   - `INCIDENT_TYPE_DESC`	The code and description of the incident category type
@@ -70,15 +70,20 @@ While certainly a small difference, it takes fire units (on average) the longest
 ![](../hw2/images/unnamed-chunk-16-1.png)
 
 
-
-#### Fire Unit Response Times to Incidents
-Next, I created map visualizations of the duration the fire incident and the time it took for a unit to arrive by distance to the nearest fire station. I differentiated by the incident's distance from the nearest fire station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!). Moreover, fire units tend to arrive in a quick manner regardless of their distance to the incident. This relieved my anxieties more than anything else, but we'll see below that some buroughs get a slightly quicker response by the fire unit on average than others. The duration of a fire likely depends on other aspects I didn't have access to in this dataset.
+#### Fire Unit Response Times & Proximity to Incidents
+Next, I created map visualizations of the duration the fire incident and the time it took for a unit to arrive by distance to the nearest fire station. First, I differentiated by the incident's distance from the nearest fire station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!).
 
 ![](../hw2/images/unnamed-chunk-13-1.png)
-![](../hw2/images/unnamed-chunk-15-1.png)
+
+Moreover, fire units tend to arrive in a quick manner regardless of their distance to the incident. This relieved my anxieties more than anything else, but we'll see below that some boroughs get a slightly quicker response by the fire unit on average than others. The duration of a fire likely depends on other aspects I didn't have access to in this dataset.
+
+![](../hw2/images/unnamed-chunk-14-1.png)
+
 
 When broken out into boroughs, it seems like even though Brooklyn and Queens have many fires, a lot of them are short lived. Staten Island seems to have had the fewest fires, though some lasted quite a while. No matter the borough, most fire incidents are within a half mile of a fire station! We're all safe.
-![](../hw2/images/unnamed-chunk-14-1.png)
+
+![](../hw2/images/unnamed-chunk-15-1.png)
+
 
 
 ### Interactivity
