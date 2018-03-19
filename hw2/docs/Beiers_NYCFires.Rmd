@@ -515,7 +515,7 @@ ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x
 
 #### b. Response Times
 
-Lastly, I created map visualizations of the duration the fire incident and the time it took for a unit to arrive by distance to the nearest fire station. I differentiated by the incident's distance from the nearest fire station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!). Moreover, fire units tend to arrive in a quick manner regardless of their distance to the incident. This relieved my anxieties more than anything else, but, nothing else too revealing is gleaned from this visualization. The duration of a fire must depend on other aspects I didn't have access to in this dataset. 
+Next, I created map visualizations of the duration the fire incident and the time it took for a unit to arrive by distance to the nearest fire station. I differentiated by the incident's distance from the nearest fire station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!). Moreover, fire units tend to arrive in a quick manner regardless of their distance to the incident. This relieved my anxieties more than anything else, but we'll see below that some buroughs get a slightly quicker response by the fire unit on average than others. The duration of a fire likely depends on other aspects I didn't have access to in this dataset. 
 
 ```{r}
 # categories of distance to fire station
@@ -622,8 +622,8 @@ ggmap(map_bor) +
                      direction = 1, 
                      guide = "legend") +
     labs(x = '', y = '', 
-       title = "NYC Fires & Duration of Incident", 
-       subtitle = "By Borough: 2015") +
+       title = "2015 NYC Fires & Duration of Incident", 
+       subtitle = "By Borough") +
   theme_tufte() +
   theme(axis.text = element_blank()) +
   theme(axis.ticks = element_blank())
@@ -633,7 +633,7 @@ ggmap(map_bor) +
 ```
 
 
-Lastly, I visualized the five NYC boroughs by the average time it took for fire units to show up to the scene. While certainly a small difference, it takes fire units the longest to arrive to Staten Island in comparison to the other boroughs, likely because (as we've seen), Staten Island has fewer stations than the other buroughs, and it could be tricky for Manhattan units to get across the bridge quickly. 
+Lastly, I visualized the five NYC boroughs by the average time it took for fire units to show up to the scene. While certainly a small difference, it takes fire units the longest to arrive to Staten Island in comparison to the other boroughs, likely because (as we've seen), Staten Island has fewer stations than the other boroughs, and it could be tricky for Manhattan units to get across the bridge quickly. 
 ```{r}
 test <- full_fire %>% 
   select(BOROUGH_DESC, diff_time) %>% 
