@@ -32,13 +32,13 @@ library(ggmap)
 
 ## Overview
 
-For this project, I use NYC Open Data to alleviate my anxieties about living on the top floor of an apartment building and investigate serious incidents requiring the fire department to respond. Using data about the locations of Fire Stations and fires occurring in New York City, I look into whether response times to fires differ across the city. Lastly, I focus on whether the distance from the Fire Station affects response times to the scene.
+For this project, I use NYC Open Data to alleviate my anxieties about living on the top floor of an apartment building and investigate serious incidents requiring the fire department to respond. Using data about the locations of Fire Stations and fires occurring in New York City, I look into whether response times to fires differ across the city. Lastly, I focus on whether distance from a Fire Station affects response times to the scene.
 
 ## Data
 
 ### Incidents responded to by fire companies
 
-NYC Open Data has data on all [incidents responded to by fire companies](https://data.cityofnewyork.us/Public-Safety/Incidents-Responded-to-by-Fire-Companies/tm6d-hbzd). I have included the variable description file in the exercise folder. The following variables are available:
+NYC Open Data has data on all [incidents responded to by fire companies](https://data.cityofnewyork.us/Public-Safety/Incidents-Responded-to-by-Fire-Companies/tm6d-hbzd). The following variables are available:
 
   - IM_INCIDENT_KEY:	Unique identifier for each incident which serves
   - INCIDENT_TYPE_DESC	The code and description of the incident category type
@@ -98,7 +98,7 @@ write_csv(fire, "severe_incidents.csv")
 
 ### FDNY Fire Station Listing
 
-NYC Open Data also provides data on the [location of all 218 Fire Stations in NYC](https://data.cityofnewyork.us/Public-Safety/FDNY-Firehouse-Listing/hc8x-tcnd). Relevant for our analyses are the following variables:
+NYC Open Data also provides data on the [location of all 218 Fire Stations in NYC](https://data.cityofnewyork.us/Public-Safety/FDNY-Firehouse-Listing/hc8x-tcnd). Relevant to my analyses are the following variables:
 
     FacilityName, Borough, Latitude, Longitude
 
@@ -138,9 +138,7 @@ content <- paste("<b>What:</b>",fire$INCIDENT_TYPE_DESC,"<br/>",
                  "<b>Location</b>:",fire$FIRE_SPREAD_DESC,"<br/>",
                  "<b>Length of Incident (min)</b>:", fire$TOTAL_INCIDENT_DURATION, "<br/>",
                  "<b>Number of Units On Scene</b>:",fire$UNITS_ONSCENE,"<br/>",
-                 "<b>Fire Dectector Status</b>:", fire$DETECTOR_PRESENCE_DESC, "<br/>",
-                 "<b>Fire Dectector Status</b>:", fire$Latitude, "<br/>",
-                 "<b>Fire Dectector Status</b>:", fire$Longitude, "<br/>")
+                 "<b>Fire Dectector Status</b>:", fire$DETECTOR_PRESENCE_DESC, "<br/>")
 
 fireIcons <- icons(
   iconUrl = "../images/fire.png",
@@ -304,6 +302,7 @@ leaflet(data = fireprop, options = leafletOptions(minZoom = 9)) %>%
             labels = c("Residential", "Commercial", "Civic", "Outdoors", "Other"))
 
 ```
+
 #### b. Clusters
 
 I added marker clustering, so that zooming in reveals the individual locations but the zoomed out map only shows the clusters.
@@ -373,7 +372,7 @@ leaflet(options = leafletOptions(minZoom = 8)) %>%
                    opacity = 0.8,
                    fillOpacity = 0.7,
                    weight = 1,
-                   radius = ~fireprop$UNITS_ONSCENE/2, # make radius smaller
+                   radius = ~fireprop$UNITS_ONSCENE/1.8, # make radius smaller
                    popup = content, 
                    group = "Incidents") %>% 
   addMarkers(data = locs, 
@@ -394,7 +393,7 @@ leaflet(options = leafletOptions(minZoom = 8)) %>%
 
 ```
 
-### 4. Distance from Fire Station and Response Time
+### 4. Distance from Fire Station and Response Times
 
 I then investigated whether the distance of the incident from the nearest Fire Station varied across the city. For all incident locations, I identified the nearest Fire Station and calculated the distance between the Fire Station and the incident location. Below is a look at the dataframe generated with the fire station deemed closest to the incident and the calculated approximate distance (mi). 
 
@@ -431,7 +430,7 @@ df <- NULL
 for (i in sets) {
   incidents <- i
   i$nearest_fh_ID <- which.min(distGeo(incidents, fh_loc))
-  i$distance <- round((min(distGeo(incidents, fh_loc)) * 0.000621371), 2) # convert to miles
+  i$distance <- (min(distGeo(incidents, fh_loc)) * 0.000621371) # convert to miles
   df<-rbind(df,i)
 }
 
@@ -448,9 +447,8 @@ full_fire$diff_time <- as.numeric(difftime(full_fire$ARRIVAL_DATE_TIME,
                                            tz = "EST", 
                                            units = "mins"))
 full_fire <- merge(x = locs, y = full_fire, by.x = 0, by.y = "nearest_fh_ID", all = TRUE)
-head(full_fire %>% 
-       select(IM_INCIDENT_KEY, Borough, FacilityName, distance))
-
+ 
+full_fire[5:10, c("PROPERTY_USE_DESC", "Borough", "FacilityName", "distance")]
 ```
 
 #### a. Plots 
@@ -465,24 +463,20 @@ ggplot(full_fire[!(full_fire$diff_time > 40), ], aes(x = IM_INCIDENT_KEY, y = di
        x = "Fire Incidents",
        title = "NYC Fire Responders: 2015", 
        subtitle = "Arrival times quick & relatively stable") +
-  #coord_flip() +
   theme_tufte() +
   theme(axis.text.x = element_blank()) +
   theme(axis.ticks.x = element_blank()) +
   theme(legend.position = "none")
 ```
 
-Next, I looked at whether arrival times differed depending on the property type. I thought units would be more responsive to homes/residences in general, but it turns out there's not much of a difference in how quickly rescuers arrive based on property type. There were a few more incidences of rescuers arriving to fires in open fields and highways a bit later than they would at a residence or restaurant -- though, based on this scatter plot, a restaurant/bar would be the place to be in a fire in terms of reliability of firefighters arrivals.
+Next, I looked at whether arrival times differed depending on the property type. I thought units would be more responsive to homes/residences in general, but it turns out there's not much of a difference in how quickly rescuers arrive based on property type. There were a few more incidences of rescuers arriving to fires in open fields and highways a bit later than they would at a residence or restaurant, though, based on this scatter plot, a restaurant/bar would be the place to be in a fire in terms of reliability of firefighters arrivals.
 
 ```{r}
-
-#colors = colorRampPalette(brewer.pal(9, "YlOrRd"))(colorCount)
 ggplot(data = full_fire[!(full_fire$diff_time > 40|is.na(full_fire$PROPERTY_USE_DESC)), ], aes(x = reorder(PROPERTY_USE_DESC, diff_time), y = diff_time)) +
   geom_point(aes(color = diff_time)) + 
   scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
-  #scale_color_manual(values=c("#FFFFCC", "#FFF3B0", "#FEE896", "#FEDC7C", "#FEC662", "#FDAF4A", "#FD9840", #"#FC7936", "#FC522B", "#EE3222", "#DD151D", "#C50523", "#A50026", "#800026")) +
   labs(y = "Arrival Time (min)", x = '',
-       title = "NYC Fire Responders: 2015", 
+       title = "2015 NYC Fire Responders", 
        subtitle = "Arrival times to incidents by property type") +
   coord_flip() +
   theme_tufte() +
@@ -493,17 +487,18 @@ ggplot(data = full_fire[!(full_fire$diff_time > 40|is.na(full_fire$PROPERTY_USE_
 Next, I visualized firefighter arrival times to incidents by NYC borough. Again, there's not too much variation between the boroughs but there are a few incidents in Staten Island, Queens and Manhattan that were long waits for help. 
 
 ```{r}
+full_fire$BOROUGH_DESC <-substring(full_fire$BOROUGH_DESC, 5)
 ggplot(full_fire[!is.na(full_fire$BOROUGH_DESC), ], aes(x = as.factor(BOROUGH_DESC), y = diff_time)) +
   geom_violin(aes(fill = BOROUGH_DESC, alpha = 0.8)) + 
   labs(y = "Arrival Time (min)", x = "",
-       title = "NYC Fire Responders: 2015", 
+       title = "2015 NYC Fire Responders", 
        subtitle = "Arrival times to incidents by NYC borough: Bronx & Brooklyn the places to be") +
   coord_flip() +
   theme_tufte() +
   theme(legend.position = "none")
 ```
 
-I wanted to see whether distance from one's nearest Fire Station mattered in terms of how quickly responders arrive to the scene. Oddly, it doesn't seem like distance to a fire station matters in terms of how fast help will arrive. Luckily, in NYC nobody is more than 0.65 miles away from a fire station, so I wonder if I'd see a larger difference in a city/suburb with fewer stations.
+I wanted to see whether distance from one's nearest fire station mattered in terms of how quickly responders arrive to the scene. Oddly, it doesn't seem like distance to a fire station matters in terms of how fast help will arrive. Luckily, in NYC nobody is more than 0.65 miles away from a fire station, so I wonder if I'd see a larger difference in arrival time in a city/suburb with fewer stations.
 
 ```{r}
 ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x = distance, y = diff_time)) +
@@ -511,9 +506,8 @@ ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x
   scale_color_gradientn(colors = rev(brewer.pal(3,"YlOrRd"))) +
   labs(y = "Arrival Time (min)", 
        x = "Distance from Nearest Fire Station (mi)",
-       title = "NYC Fire Responders: 2015", 
+       title = "2015 NYC Fire Responders", 
        subtitle = "Arrival times quick & stable regardless of distance to incident") +
-  #coord_flip() +
   theme_tufte() +
   theme(legend.position = "none")
 
@@ -521,7 +515,7 @@ ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x
 
 #### b. Response Times
 
-Lastly, I created map visualizations of response times to the incidents. I differentiated by the incident's distance from the nearest Fire Station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!). This relieved my anxieties more than anything else, but, nothing too interesting is gleaned from this visualization. Length of a fire must depend on other aspects I didn't have access to in this dataset. 
+Lastly, I created map visualizations of the duration the fire incident and the time it took for a unit to arrive by distance to the nearest fire station. I differentiated by the incident's distance from the nearest fire station and colored each property by the duration of the incident. The maps make it clear that there are far fewer locations that are even more than a half mile away from a Fire Station as opposed to less than half a mile (and even more properties are within a quarter mile from a Fire Station!). Moreover, fire units tend to arrive in a quick manner regardless of their distance to the incident. This relieved my anxieties more than anything else, but, nothing else too revealing is gleaned from this visualization. The duration of a fire must depend on other aspects I didn't have access to in this dataset. 
 
 ```{r}
 # categories of distance to fire station
@@ -534,6 +528,7 @@ full_fire$distance_rd <- ifelse(full_fire$distance >= .25 & full_fire$distance <
 full_fire$distance_rd <- ifelse(full_fire$distance  >= .5, 
                                 "Further Than Half Mile", 
                                 full_fire$distance_rd)
+full_fire$distance_rd <- factor(full_fire$distance_rd, levels = c("Closer Than Quarter Mile", "Between Quarter & Half Mile", "Further Than Half Mile"))
 
 # breaks in fire length
 full_fire$brks <- cut(full_fire$TOTAL_INCIDENT_DURATION, 
@@ -564,7 +559,36 @@ ggmap(incident_map) +
   
 ```
 
+
 ```{r}
+full_fire$brks_time <- cut(full_fire$diff_time, 
+                   breaks=c(0, 1, 2.5, 3.5, 5, 10, 40), 
+                   labels=c("0-1 min", "1-2.5 min", "2.5-3.5 min", 
+                            "3.5-5 min", "5-10 min", ">10 min"))
+ggmap(incident_map) + 
+  geom_point(data = full_fire[!is.na(full_fire$distance_rd)&!(full_fire$diff_time > 40), ], 
+             aes(x = lon, y = lat, color = brks_time),
+                 alpha = 0.5, 
+                 size = 1) +
+  scale_color_brewer(name = "Arrival Time:", 
+                     type = "seq", 
+                     palette = "YlOrRd", 
+                     direction = 1, 
+                     guide = "legend") +
+  labs(x = '', y = '', 
+       title = "2015 NYC Fires", 
+       subtitle = "Fire Unit Arrival Time & Proximity to Incident") +
+  theme_tufte() +
+  theme(axis.text = element_blank()) +
+  theme(axis.ticks = element_blank()) +
+  facet_wrap(~distance_rd, nrow = 1, drop = TRUE) +
+  theme(strip.background = element_rect(fill = "#ffff99")) +
+  theme(legend.position = "right")
+```
+
+
+When broken out into boroughs, it seems like even though Brooklyn and Queens have many fires, a lot of them are short lived. Staten Island seems to have had the fewest fires, though some lasted quite a while. 
+```{r, message = FALSE}
 library(rgdal)
 
 nyc_bor <- readOGR("../data/nybb_18a/.", "nybb")
@@ -579,19 +603,18 @@ nyc_bor$id[nyc_bor$id == 3] <- "Brooklyn"
 nyc_bor$id[nyc_bor$id == 4] <- "Queens"
 nyc_bor$Borough <- nyc_bor$id
 
+map_bor <- get_map("New York City", zoom = 10, maptype = "toner-background")
 
-map_zip <- get_map("New York City", zoom=10, 
-                      source="stamen",maptype="toner-background")
 
-ggmap(map_zip) + 
+ggmap(map_bor) + 
     geom_polygon(aes(fill = Borough, x = long, y = lat, group = group), 
                  data = nyc_bor,
-                 alpha = 0.8, 
+                 alpha = 0.6, 
                  color = "black",
                  size = 0.2) +
     geom_point(data = full_fire[!is.na(full_fire$distance_rd), ], 
                aes(x = lon, y = lat, color = brks),
-                 alpha = 0.5, 
+                 alpha = 0.9, 
                  size = 0.3) +
   scale_color_brewer(name = "Length of Fire:", 
                      type = "seq", 
@@ -599,7 +622,7 @@ ggmap(map_zip) +
                      direction = 1, 
                      guide = "legend") +
     labs(x = '', y = '', 
-       title = "NYC Fire Incidents & Proximity to Nearest Fire Station", 
+       title = "NYC Fires & Duration of Incident", 
        subtitle = "By Borough: 2015") +
   theme_tufte() +
   theme(axis.text = element_blank()) +
@@ -608,4 +631,30 @@ ggmap(map_zip) +
 
   
 ```
+
+No matter the borough, most fire incidents are within a half mile of a fire station! We're all safe. 
+```{r}
+ggmap(map_bor) + 
+    geom_polygon(aes(fill = Borough, x = long, y = lat, group = group), 
+                 data = nyc_bor,
+                 alpha = 0.6, 
+                 color = "black",
+                 size = 0.2) +
+    geom_point(data = full_fire[!is.na(full_fire$distance_rd), ], 
+               aes(x = lon, y = lat, color = distance_rd),
+                 alpha = 0.9, 
+                 size = 0.3) +
+    scale_color_brewer(name = "Distance to Fire Station:", 
+                     type = "seq", 
+                     palette = "YlOrRd", 
+                     direction = 1, 
+                     guide = "legend") +
+    labs(x = '', y = '', 
+       title = "2015 NYC Fires & Proximity to Nearest Fire Station", 
+       subtitle = "By Borough: 2015") +
+  theme_tufte() +
+  theme(axis.text = element_blank()) +
+  theme(axis.ticks = element_blank())
+```
+
 
