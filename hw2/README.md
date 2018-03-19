@@ -40,6 +40,8 @@ NYC Open Data has data on all incidents responded to by fire stations. For the p
 
 Additional data about NYC Fire Stations is available in a separate dataset including the `FacilityName`, `Borough`, `Latitude`, and `Longitude`.
 
+ Lastly, NYC Open Data provides shape files for [NYC Borough boundaries](https://data.cityofnewyork.us/City-Government/Borough-Boundaries/tqmj-j8zm/data). This data is used in the final few plots.
+
 ## Highlights
 
 *All interactive leaflet maps are included in the HTML document.*
