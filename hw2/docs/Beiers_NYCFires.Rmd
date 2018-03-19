@@ -586,8 +586,8 @@ ggmap(incident_map) +
   theme(legend.position = "right")
 ```
 
+When broken out into boroughs, it seems like even though Brooklyn and Queens have many fires, a lot of them are short lived. Staten Island seems to have had the fewest fires, though some lasted quite a while. No matter the borough, most fire incidents are within a half mile of a fire station! We're all safe. 
 
-When broken out into boroughs, it seems like even though Brooklyn and Queens have many fires, a lot of them are short lived. Staten Island seems to have had the fewest fires, though some lasted quite a while. 
 ```{r, message = FALSE}
 library(rgdal)
 
@@ -632,26 +632,27 @@ ggmap(map_bor) +
   
 ```
 
-No matter the borough, most fire incidents are within a half mile of a fire station! We're all safe. 
+
+Lastly, I visualized the five NYC boroughs by the average time it took for fire units to show up to the scene. While certainly a small difference, it takes fire units the longest to arrive to Staten Island in comparison to the other boroughs, likely because (as we've seen), Staten Island has fewer stations than the other buroughs, and it could be tricky for Manhattan units to get across the bridge quickly. 
 ```{r}
+test <- full_fire %>% 
+  select(BOROUGH_DESC, diff_time) %>% 
+  na.omit() %>% 
+  group_by(BOROUGH_DESC) %>% 
+  summarize(avg = mean(diff_time))
+
+test1 <- merge(nyc_bor, test, by.x = "Borough", by.y = "BOROUGH_DESC")
+
 ggmap(map_bor) + 
-    geom_polygon(aes(fill = Borough, x = long, y = lat, group = group), 
-                 data = nyc_bor,
+    geom_polygon(aes(fill = avg, x = long, y = lat, group = group), 
+                 data = test1,
                  alpha = 0.6, 
                  color = "black",
                  size = 0.2) +
-    geom_point(data = full_fire[!is.na(full_fire$distance_rd), ], 
-               aes(x = lon, y = lat, color = distance_rd),
-                 alpha = 0.9, 
-                 size = 0.3) +
-    scale_color_brewer(name = "Distance to Fire Station:", 
-                     type = "seq", 
-                     palette = "YlOrRd", 
-                     direction = 1, 
-                     guide = "legend") +
+    scale_fill_gradientn(colors =(brewer.pal(5,"YlOrRd")), name = "Avg. Arrival Time (min)") +
     labs(x = '', y = '', 
-       title = "2015 NYC Fires & Proximity to Nearest Fire Station", 
-       subtitle = "By Borough: 2015") +
+       title = "2015 NYC Fires & Avg. Arrival Time to Incident", 
+       subtitle = "By Borough") +
   theme_tufte() +
   theme(axis.text = element_blank()) +
   theme(axis.ticks = element_blank())
