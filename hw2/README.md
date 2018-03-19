@@ -91,4 +91,4 @@ For interactive plots, please see the [HTML File](.hw2/output/Beiers_NYCFires.ht
 
 
 ## References
-Some ideas and code were borrowed from Thomas Brambor (Professor, Columbia University), as well as the[Leaflet for R](https://rstudio.github.io/leaflet/markers.html) R Studio site.
+Some ideas and code were borrowed from Thomas Brambor (Professor, Columbia University), as well as the [Leaflet for R](https://rstudio.github.io/leaflet/markers.html) R Studio site.
