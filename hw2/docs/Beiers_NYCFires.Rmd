@@ -488,6 +488,7 @@ ggplot(data = full_fire[!(full_fire$diff_time > 40|is.na(full_fire$PROPERTY_USE_
 Next, I visualized firefighter arrival times to incidents by NYC borough. Again, there's not too much variation between the boroughs but there are a few incidents in Staten Island, Queens and Manhattan that were long waits for help. 
 
 ```{r}
+colors <- c("#800026","#E31A1C", "#FD8D3C","#FED976","#ffffff")
 full_fire$BOROUGH_DESC <-substring(full_fire$BOROUGH_DESC, 5)
 ggplot(full_fire[!is.na(full_fire$BOROUGH_DESC), ], aes(x = as.factor(BOROUGH_DESC), y = diff_time)) +
   geom_violin(aes(fill = BOROUGH_DESC, alpha = 0.8)) + 
@@ -513,6 +514,7 @@ ggplot(full_fire[!(full_fire$diff_time > 40|is.na(full_fire$distance)), ], aes(x
   theme(legend.position = "none")
 
 ```
+
 
 #### b. Response Times
 
@@ -660,5 +662,6 @@ ggmap(map_bor) +
   theme(axis.text = element_blank()) +
   theme(axis.ticks = element_blank())
 ```
+
 
 

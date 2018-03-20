@@ -85,6 +85,7 @@ Moreover, fire units tend to arrive in a quick manner regardless of their distan
 When broken out into boroughs, it seems like even though Brooklyn and Queens have many fires, a lot of them are short lived. Staten Island seems to have had the fewest fires, though some lasted quite a while. No matter the borough, most fire incidents are within a half mile of a fire station! We're all safe.
 
 ![](../hw2/images/unnamed-chunk-15-1.png)
+![](../hw2/images/unnamed-chunk-17-1.png)
 
 
 
