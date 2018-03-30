@@ -245,7 +245,7 @@ colors <- c("#0868ac", "#084081", "#2b8cbe", "#7bccc4","#a8ddb5")
 blurb_wrds_20$row <- row_number(blurb_wrds_20$word)
 
 # pyramid plot
-ggplot(blurb_wrds_20, aes(stats::reorder(x = word, n), 
+ggplot(blurb_wrds_20, aes(x = reorder(word, n), 
                   y = n, fill = success)) +
   geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Successful"), stat = "identity") +  
   geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Unsuccessful"), stat = "identity") + 
