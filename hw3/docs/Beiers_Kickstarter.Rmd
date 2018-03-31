@@ -24,6 +24,8 @@ library(wordcloud)
 library(tidytext)
 library(SnowballC)
 library(plotrix)
+library(qdap)
+library(quanteda)
 setwd("~/Dropbox/QMSS/Data Visualization/Beiers_Sophie/hw3/docs")
 ```
 
@@ -110,8 +112,8 @@ ks_sf <- ks %>%
   filter(goal > 100 & backers_count > 10 & state == "successful" & location_town == "San Francisco") 
 data(ks_sf)
 
-x <- c("Backers:  ", "Pledged $: ", "Goal $: ", "Success Ratio %: ")
-y <- sprintf("{point.%s}", c("backers_count", "converted_pledged_amount", "goal", "achievement"))
+x <- c("Name", "Backers:  ", "Pledged $: ", "Goal $: ", "Success Ratio %: ")
+y <- sprintf("{point.%s}", c("name", "backers_count", "converted_pledged_amount", "goal", "achievement"))
 tltip <- tooltip_table(x, y)
 
 colors <- c("#0868ac", "#084081", "#2b8cbe", "#7bccc4","#a8ddb5")
@@ -180,6 +182,9 @@ blurb_words <- projects %>%
 blurb_words <- blurb_words %>% 
   anti_join(stop_words) 
 blurb_words$word <- removeNumbers(blurb_words$word)
+blurb_words$word <- removePunctuation(blurb_words$word)
+blurb_words$word <- qdap::Filter(blurb_words$word, min = 2, max = Inf, count.apostrophe = TRUE,
+  stopwords = NULL, ignore.case = TRUE) # get rid of words less than 2 letters long
 
 # create document term matrix
 dtm <- blurb_words %>%
@@ -192,18 +197,17 @@ tdm <- blurb_words %>%
 tdm_mat <- as.matrix(tdm)
 
 # all most successful docs together
-blurb_words_succ <- projects %>%
+blurb_words_succ <- blurb_words %>%
   filter(id %in% top1000$id) %>% 
-  unnest_tokens(word, blurb, to_lower = TRUE) %>% 
-  count(word, sort = FALSE) 
-blurb_words_succ <- blurb_words_succ %>% 
-  anti_join(stop_words) 
-blurb_words_succ$word <- removeNumbers(blurb_words_succ$word)
-blurb_words_succ <- blurb_words_succ[-c(1:172), ]
-blurb_words_succ$word <- removePunctuation(blurb_words_succ$word)
+  group_by(word) %>% 
+  count(word, sort = FALSE) %>% 
+  filter(nn < 300) %>% 
+  ungroup()
+  
 
-wordcloud(words = blurb_words_succ$word, freq = blurb_words_succ$n, scale = c(4, .5), min.freq = 1,
-          max.words = 1000, random.order = FALSE, rot.per = 0.35,
+set.seed(2018)
+wordcloud(words = blurb_words_succ$word, freq = blurb_words_succ$nn, scale = c(5, .5), min.freq = 5,
+          max.words = 200, random.order = FALSE, rot.per = 0.35,
           colors=brewer.pal(8, "Dark2"))
 
 ```
@@ -215,38 +219,35 @@ Provide a pyramid plot to show how the words between successful and unsuccessful
 
 ```{r}
 # df for unsuccessful projects
-blurb_words_unsucc <- projects %>%
+blurb_words_unsucc <- blurb_words %>%
   filter(id %in% bottom1000$id) %>% 
-  unnest_tokens(word, blurb, to_lower = TRUE) %>% 
-  count(word, sort = FALSE) 
-blurb_words_unsucc <- blurb_words_unsucc %>% 
-  anti_join(stop_words) 
-blurb_words_unsucc$word <- removeNumbers(blurb_words_unsucc$word)
-blurb_words_unsucc <- blurb_words_unsucc[-c(1:172), ]
-blurb_words_unsucc$word <- removePunctuation(blurb_words_unsucc$word)
+  group_by(word) %>% 
+  count(word, sort = TRUE) %>% 
+  filter(nn != 236) %>% 
+  ungroup()
 
 # differentiate between successful and unsuccessful
 blurb_words_unsucc$success <- "Unsuccessful"
 blurb_words_succ$success <- "Successful"
 
 # slice into top 20
-blurb_words_succ <- blurb_words_succ %>% 
-arrange(desc(n)) %>% 
-  slice(1:20)
-blurb_words_unsucc <- blurb_words_unsucc %>% 
-arrange(desc(n)) %>% 
+blurb_words_succ20 <- blurb_words_succ %>% 
+dplyr::arrange(desc(nn)) %>% 
+  dplyr::slice(1:20)
+blurb_words_unsucc20 <- blurb_words_unsucc %>% 
+arrange(desc(nn)) %>% 
   slice(1:20)
 
 # combine data frames
-blurb_wrds_20 <- rbind(blurb_words_unsucc, blurb_words_succ)
-blurb_wrds_20$n <- ifelse(blurb_wrds_20$success == "Unsuccessful", blurb_wrds_20$n * -1, blurb_wrds_20$n) # turn unsuccessful numbers negative
+blurb_wrds_20 <- rbind(blurb_words_unsucc20, blurb_words_succ20)
+blurb_wrds_20$nn <- ifelse(blurb_wrds_20$success == "Unsuccessful", blurb_wrds_20$nn * -1, blurb_wrds_20$nn) # turn unsuccessful numbers negative
 
-colors <- c("#0868ac", "#084081", "#2b8cbe", "#7bccc4","#a8ddb5")
+
+#colors <- c("#0868ac", "#084081", "#2b8cbe", "#7bccc4","#a8ddb5")
 blurb_wrds_20$row <- row_number(blurb_wrds_20$word)
 
 # pyramid plot
-ggplot(blurb_wrds_20, aes(x = reorder(word, n), 
-                  y = n, fill = success)) +
+ggplot(blurb_wrds_20, aes(x = reorder(word, nn), y = nn, fill = success)) +
   geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Successful"), stat = "identity") +  
   geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Unsuccessful"), stat = "identity") + 
   coord_flip() +
@@ -261,6 +262,55 @@ ggplot(blurb_wrds_20, aes(x = reorder(word, n),
 #### c) Simplicity as a virtue
 
 These blurbs are short in length (max. 150 characters) but let's see whether brevity and simplicity still matters. Calculate a readability measure (Flesh Reading Ease, Flesh Kincaid or any other comparable measure) for the texts. Visualize the relationship between the readability measure and one of the measures of success. Briefly comment on your finding.
+```{r}
+#blurb_words_2000 <- rbind(blurb_words_succ, blurb_words_unsucc)
+blurb_words$syllable <- syllable_sum(blurb_words$word)
+blurb_words$syllable[is.na(blurb_words$syllable)] <- 0
+projects$sentences <- nsentence(projects$blurb)
+blurb_words <- blurb_words %>% 
+  group_by(id) %>% 
+  mutate(total_words = length(word), total_syllables = sum(syllable)) %>% 
+  ungroup()
+
+blurb_words <- merge(blurb_words, projects, by = "id")
+
+# calculating flesch reading ease scores:
+blurb_words$fk_score <- (206.835 - (1.015*(blurb_words$total_words/blurb_words$sentences)) - (84.6*(blurb_words$total_syllables/blurb_words$total_words)))
+
+# summarizing by ids
+na.omit(fk <- blurb_words %>% 
+  group_by(id) %>% 
+  select(id, fk_score) %>% 
+  unique())
+
+# joining previous success info 
+fk <- merge(fk, ks, by = "id")
+fk <- fk %>% 
+  filter(goal > 100 & backers_count > 10 & achievement < 3600)
+
+x <- c("Name", "Backers:  ", "Pledged $: ", "Goal $: ", "Success Ratio %: ", "Flesch-Kinkaid Readability Score:")
+y <- sprintf("{point.%s}", c("name", "backers_count", "converted_pledged_amount", "goal", "achievement", "fk_score"))
+tltip <- tooltip_table(x, y)
+
+colors <- c("#0868ac", "#084081", "#2b8cbe", "#7bccc4","#a8ddb5")
+
+fk$color <- colorize((log(fk$backers_count)), colors)
+
+hchart(fk, "scatter", hcaes(fk_score, backers_count, size = backers_count, color = color)) %>% 
+  hc_chart(backgroundColor = "white") %>% 
+  hc_title(text = "Kickstarter Projects 2009 - 2018") %>% 
+  hc_subtitle(text = "Popularity & Readability Score of Summary Blurb") %>% 
+  hc_tooltip(useHTML = TRUE, 
+             headerFormat = '', 
+             pointFormat = tltip) %>% 
+  hc_size(height = 500) %>% 
+  hc_size(height = 500, width = 600) %>% 
+  hc_yAxis(
+    title = list(text = "# of Backers", gridLineWidth = 0.5)) %>% 
+  hc_xAxis(
+    title = list(text = "Flesch-Kinkaid Score (easy to difficult)", gridLineWidth = 0.5)) %>% 
+  hc_add_theme(hc_theme_tufte())
+```
 
 ### 3. Sentiment
 
