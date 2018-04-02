@@ -1,18 +1,28 @@
 ---
-title: "Assignment 3: Kickstarter Projects"
-author: Thomas Brambor
-date: 2017-03-28
+title: "Kickstarter Projects"
+author: Sophie Beiers
+date: April 1, 2018
 always_allow_html: yes
 output: 
   html_document:
     keep_md: true
+    toc: true
+    theme: lumen
+    highlight: tango
+    code_folding: hide
 ---
 
 Text Mining Kickstarter Projects
 ================================
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.path="../images/",
+               cache.path="cache/",
+               cache=FALSE,
+               echo=TRUE,
+               message=FALSE,
+               warning=FALSE,
+               eval = TRUE) 
 
 library(tidyverse)
 library(plotly)
@@ -35,13 +45,11 @@ Kickstarter is an American public-benefit corporation based in Brooklyn, New Yor
 
 Kickstarter has reportedly received more than $1.9 billion in pledges from 9.4 million backers to fund 257,000 creative projects, such as films, music, stage shows, comics, journalism, video games, technology and food-related projects.
 
-For this assignment, I am asking you to analyze the descriptions of kickstarter projects to identify commonalities of successful (and unsuccessful projects) using the text mining techniques we covered in the past two lectures. 
+For this assignment, I analyze the descriptions of kickstarter projects to identify commonalities of successful (and unsuccessful projects) using text mining techniques. 
 
 ## Data
 
 The dataset for this assignment is taken from [webroboto.io ‘s repository](https://webrobots.io/kickstarter-datasets/). They developed a scrapper robot that crawls all Kickstarter projects monthly since 2009. We will just take data from the most recent crawl on 2018-02-15.
-
-To simplify your task, I have downloaded the files and partially cleaned the scraped data. In particular, I converted several JSON columns, corrected some obvious data issues, and removed some variables that are not of interest (or missing frequently). I have also  subsetted the data to only contain projects originating in the United States (to have only English language and USD denominated projects).
 
 The data is contained in the file `kickstarter_data.csv` and contains about 150,000 projects and about 20 variables.
 
@@ -50,11 +58,11 @@ ks <- read_csv("../data/kickstarter_projects.csv")
 ```
 
 
-## Tasks for the Assignment
 
-### 1. Identifying Successful Projects
 
-#### a) Success by Category
+## 1. Identifying Successful Projects
+
+### a) Success by Category
 
 There are several ways to identify success of a project:
   - State (`state`): Whether a campaign was successful or not.
@@ -64,6 +72,8 @@ There are several ways to identify success of a project:
   - How quickly the goal was reached (difference between `launched_at` and `state_changed_at`) for those campaigns that were successful.
 
 Use one or more of these measures to visually summarize which categories were most successful in attracting funding on kickstarter. Briefly summarize your findings.
+
+To defined "success," I chose to create a ratio of pledged amount of money over the monetary goal of the campaign. I removed any campaign with a goal of under $30 to ensure results were a little less skewed and eliminated any campaigns deemed unsuccessful since many of these campaigns dropped out or discontinued. I then broke out the results into categories of campaigns; we can see below that *all* campaign categories received an average of over 100% of their goal money, which is surprising! The technology category seems to have the most success while art campaigns were still highly successful (over 100% of goal money on average) but less exhorbitantly successful than other campaign categories. 
 
 ```{r}
 ks$goal <- round(ks$goal, 0)
@@ -106,12 +116,17 @@ geom_bar(stat = "identity", fill = "#a8ddb5", alpha = 0.8) +
 
 ```
 
-#### b) Success in San Francisco
+### b) Success in San Francisco
+
+I was curious to visualize success in San Francisco because it's a tech hub and a hot spot for Kickstarter campaigns. Most campaigns from San Francisco recieved *over* 100% of their goal from their backers, so "success" took on a new definition of popularity. Larger circles had more backers and circles placed higher up on the graph received the most pledged money. Scroll over each bubble for more information about the project.
+
 ```{r}
+# filtered for goal over 100 this time
 ks_sf <- ks %>% 
   filter(goal > 100 & backers_count > 10 & state == "successful" & location_town == "San Francisco") 
 data(ks_sf)
 
+# high charter tooltip 
 x <- c("Name", "Backers:  ", "Pledged $: ", "Goal $: ", "Success Ratio %: ")
 y <- sprintf("{point.%s}", c("name", "backers_count", "converted_pledged_amount", "goal", "achievement"))
 tltip <- tooltip_table(x, y)
@@ -138,19 +153,16 @@ hchart(ks_sf, "scatter", hcaes(goal, pledged, size = backers_count, color = colo
   hc_add_theme(hc_theme_tufte())
 ```
 
-#### **BONUS ONLY:** c) Success by Location
-
-Now, use the location information to calculate the total number of successful projects by state (if you are ambitious, normalize by population). Also, identify the Top 50 "innovative" cities in the U.S. (by whatever measure you find plausible). Provide a leaflet map showing the most innovative states and cities in the U.S. on a single map based on these information.
-
-### 2. Writing your success story
+## 2. Writing your success story
 
 Each project contains a `blurb` -- a short description of the project. While not the full description of the project, the short headline is arguably important for inducing interest in the project (and ultimately popularity and success). Let's analyze the text.
 
-#### a) Cleaning the Text and Word Cloud
+### a) Cleaning the Text and Word Cloud
 
-To reduce the time for analysis, select the 1000 most successful projects and a sample of 1000 unsuccessful projects. Use the cleaning functions introduced in lecture (or write your own in addition) to remove unnecessary words (stop words), syntax, punctuation, numbers, white space etc. Note, that many projects use their own unique brand names in upper cases, so try to remove these fully capitalized words as well (since we are aiming to identify common words across descriptions). Stem the words left and complete the stems. Create a document-term-matrix.
+I selected the top 1000 most successful projects and the bottom 1000 least successful projects, then removed stop words, punctuation and numbers. I chose to not stem the words as to leave more of the meaning in the word cloud. I then created a document-term-matrix and term-document-matrix and visualized the most frequent words among the 1000 most successful projects in a word cloud.
 
-Provide a word cloud of the most frequent or important words (your choice which frequency measure you choose) among the most successful projects.
+Most common words throughout all 2000 projects include "game," "art," "designed" and "homemade." Many of the kickstarter projects must be game-related, and it's not surprising that many projects are homemade and artistically designed! 
+
 
 ```{r}
 # choose top 1000 and bottom 1000 projects
@@ -167,8 +179,6 @@ bottom1000 <- ks %>%
   slice(1:1000)
 
 projects <- rbind(top1000, bottom1000)
-# projects <- projects %>% 
-#   select(blurb, backers_count, converted_pledged_amount, goal, name, achievement, success)
 projects <- projects %>% 
   select(id, blurb)
 projects <- as.data.frame(projects)
@@ -213,9 +223,9 @@ wordcloud(words = blurb_words_succ$word, freq = blurb_words_succ$nn, scale = c(5
 ```
 
 
-#### b) Success in words
+### b) Success in words
 
-Provide a pyramid plot to show how the words between successful and unsuccessful projects differ in frequency. A selection of 10 - 20 top words is sufficient here.  
+I then created a pyramid plot to show how the words between the most successful and unsuccessful projects differ in frequency. I selected the top 20 words used by the 1000 most successful and least successful campaigns. 
 
 ```{r}
 # df for unsuccessful projects
@@ -242,8 +252,6 @@ arrange(desc(nn)) %>%
 blurb_wrds_20 <- rbind(blurb_words_unsucc20, blurb_words_succ20)
 blurb_wrds_20$nn <- ifelse(blurb_wrds_20$success == "Unsuccessful", blurb_wrds_20$nn * -1, blurb_wrds_20$nn) # turn unsuccessful numbers negative
 
-
-#colors <- c("#0868ac", "#084081", "#2b8cbe", "#7bccc4","#a8ddb5")
 blurb_wrds_20$row <- row_number(blurb_wrds_20$word)
 
 # pyramid plot
@@ -259,26 +267,36 @@ ggplot(blurb_wrds_20, aes(x = reorder(word, nn), y = nn, fill = success)) +
 ```
 
 
-#### c) Simplicity as a virtue
+### c) Simplicity as a virtue
 
-These blurbs are short in length (max. 150 characters) but let's see whether brevity and simplicity still matters. Calculate a readability measure (Flesh Reading Ease, Flesh Kincaid or any other comparable measure) for the texts. Visualize the relationship between the readability measure and one of the measures of success. Briefly comment on your finding.
+These blurbs are short in length (max. 150 characters) but let's see whether brevity and simplicity still matters. I calculated a readability measure (Flesh Kincaid) for the texts defined by the equation below (from Wikipedia):  
+![](../images/fk.png)
+
+Flesch Kincaid produces a number that defines how easy or difficult a chunk of text is based on what grade level in school should be able to read it. Anything that receives over a 90 is considered easy to read (a 5th grader could read it) and anything below a 30 is considered difficult and for college students to be able to read and understand. I then visualized the relationship between the Flesch Kincaid measure of the short blurb of the campaign and the number of backers each campaign had. 
+
+From the visualization, we can see that most heavily-backed projects were in between -13 to 80 in terms of Flesch Kincaid scores. That's a very large range! Most projects in general were left-skewed, but a few blurbs were so difficult to read they received negative scores. Those projects didn't have the most backers but still received over a thousand. 
+
+Hover over the circles for more information about each project.The larger the circle, the more backers the project received.
+
 ```{r}
 #blurb_words_2000 <- rbind(blurb_words_succ, blurb_words_unsucc)
-blurb_words$syllable <- syllable_sum(blurb_words$word)
-blurb_words$syllable[is.na(blurb_words$syllable)] <- 0
+# calculate syllables and sentences 
+fk <- blurb_words
+fk$syllable <- syllable_sum(fk$word)
+fk$syllable[is.na(fk$syllable)] <- 0
 projects$sentences <- nsentence(projects$blurb)
-blurb_words <- blurb_words %>% 
+fk <- fk %>% 
   group_by(id) %>% 
   mutate(total_words = length(word), total_syllables = sum(syllable)) %>% 
   ungroup()
 
-blurb_words <- merge(blurb_words, projects, by = "id")
+fk <- merge(fk, projects, by = "id")
 
 # calculating flesch reading ease scores:
-blurb_words$fk_score <- (206.835 - (1.015*(blurb_words$total_words/blurb_words$sentences)) - (84.6*(blurb_words$total_syllables/blurb_words$total_words)))
+fk$fk_score <- (206.835 - (1.015*(fk$total_words/fk$sentences)) - (84.6*(fk$total_syllables/fk$total_words)))
 
 # summarizing by ids
-na.omit(fk <- blurb_words %>% 
+na.omit(fk <- fk %>% 
   group_by(id) %>% 
   select(id, fk_score) %>% 
   unique())
@@ -308,25 +326,130 @@ hchart(fk, "scatter", hcaes(fk_score, backers_count, size = backers_count, color
   hc_yAxis(
     title = list(text = "# of Backers", gridLineWidth = 0.5)) %>% 
   hc_xAxis(
-    title = list(text = "Flesch-Kinkaid Score (easy to difficult)", gridLineWidth = 0.5)) %>% 
+    title = list(text = "Flesch-Kinkaid Score (difficult to easy)", gridLineWidth = 0.5)) %>% 
   hc_add_theme(hc_theme_tufte())
 ```
 
-### 3. Sentiment
+## 3. Sentiment
 
 Now, let's check whether the use of positive / negative words or specific emotions helps a project to be successful. 
 
-#### a) Stay positive
+### a) Stay positive
 
-Calculate the tone of each text based on the positive and negative words that are being used. You can rely on the Hu & Liu dictionary provided in lecture or use the Bing dictionary contained in the tidytext package (`tidytext::sentiments`). Visualize the relationship between tone of the document and success. Briefly comment.
+I calculate the tone of each text using the AFINN lexicon based on the positive and negative words used in each blurb. AFINN assigns a positive or negative score to each word (between -5 and 5) depending on how positive or negative the sentiment attached to the word is. I calculated a cumulative measure of negativity or positivity per blurb by adding up the scores on each individual word. Below, I visualized the relationship between the tone of the blurb and success. 
 
-#### b) Positive vs negative
+While quite similar in nature in terms of the number of and magnitude of positive and negative words used in each blurb, less successful projects used a larger range of extreme positive or extreme negative words. Both successful and unsuccessful projects mainly use positive words (with a score above 0 averaging around a score of 3) overall. 
 
-Segregate all 2,000 blurbs into positive and negative texts based on their polarity score calculated in step (a). Now, collapse the positive and negative texts into two larger documents. Create a document-term-matrix based on this collapsed set of two documents. Generate a comparison cloud showing the most-frequent positive and negative words.  
+```{r}
+# join lexicon
+afinn <- get_sentiments("afinn")  
+word_sent <- merge(x = blurb_words, y = ks, by = "id", all.x = TRUE)
+word_sent <- word_sent %>% 
+  select(id, name, word, n, created_at, pledged, backers_count, goal, achievement, blurb) %>% 
+  inner_join(afinn)
+word_sent$score <- (word_sent$score * word_sent$n)
 
-#### c) Get in their mind
+# assign labels to most and least successful
+word_sent <- word_sent %>% 
+  dplyr::filter(id %in% top1000$id| id %in% bottom1000$id)
+word_sent$success <- ifelse(word_sent$id %in% top1000$id, "Most Successful", "Least Successful")
 
-Now, use the NRC Word-Emotion Association Lexicon in the tidytext package to identify a larger set of emotions (anger, anticipation, disgust, fear, joy, sadness, surprise, trust). Again, visualize the relationship between the use of words from these categories and success. What is your finding?
+
+# x = 0
+# for (i in seq(1:985)) {
+#   blurb_sent_succ$cumm_score[i] <- blurb_sent_succ$score[i] + x
+#   x =  blurb_sent_succ$cumm_score[i]
+# }
+
+# assign scores to blurbs as a whole based on word scores
+blurb_sent <- word_sent %>% 
+  group_by(id) %>% 
+  mutate(txt_score = sum(score)) %>% 
+  select(id, txt_score, backers_count, success, blurb) %>% 
+  unique() %>% 
+  ungroup()
+
+# plot
+ggplot(data = blurb_sent, aes(x = success, y = txt_score)) +
+  geom_violin(aes(fill = success, alpha = 0.8)) +
+  coord_flip() +
+  theme_tufte() +
+  scale_fill_manual(values=c("#0868ac","#a8ddb5")) +
+  labs(x = '', y = '\n Negative to Positive Scoring Words', 
+       title = 'Positive and Negative Words in Campaign Blurbs', 
+       subtitle = 'Unsuccessful campaigns have larger range of extreme positive and extreme negative sentiments') +
+  theme(axis.ticks = element_blank(),
+        legend.position = "none")
+
+  
+```
+
+
+### b) Positive vs negative
+
+I segregated all 2,000 blurbs into positive and negative texts based on their polarity score calculated in step (a). Then, I created a term-document-matrix in order to generate a comparison cloud showing the most-frequent positive and negative words.
+
+Negative words most frequently include the use of "limited," which is funny only because often times a "limited edition" is seen as a good thing! Other frequent negative terms include "hard," "battle," "lost" and "fight."
+
+Frequent positive words include "inspired," "love," "easy" and "share."
+```{r}
+# neg and pos grouping 
+word_sent$negpos <- ifelse(word_sent$score < 0, "negative", "positive")
+
+# create tdm 
+tdm_pn <- word_sent %>% 
+  cast_tdm(word, negpos, n)
+tdm_pn_mat <- as.matrix(tdm_pn)
+
+# comparison cloud
+comparison.cloud(tdm_pn_mat, colors = c("#a8ddb5", "#0868ac"), scale = c(5, 0.5), max.words = 500, title.size = 2, rot.per = 0.35)
+```
+
+
+### c) Get in their mind
+
+Lastly, I used the NRC Word-Emotion Association Lexicon to identify a larger set of emotions (anger, anticipation, disgust, fear, joy, sadness, surprise, trust). I visualized the relationship between success and range of emotions in two different ways; first with a bar chart and second with a lollipop chart. We can see in both that successful compaigns tend to use more of every type of emotional word except for "joy," for which unsuccessful campaigns use more. 
+
+```{r}
+# join nrc sentiment
+nrc <- get_sentiments("nrc")  
+word_sent <- word_sent %>% 
+  inner_join(nrc) %>% 
+  select(id, name, word, n, achievement, success, sentiment) %>% 
+  group_by(success, sentiment) %>% 
+  summarize(n = sum(n)) %>% 
+  ungroup()
+
+# plot
+ggplot(data = word_sent, aes(x = reorder(sentiment, -n), y = n, fill = success)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_tufte() +
+  scale_fill_manual(values=c("#0868ac","#a8ddb5"), name = '') +
+  labs(x = '', y = '\n # of words', 
+       title = 'Sentiment of Campaign Blurbs', 
+       subtitle = 'Unsuccessful campaigns express joy ') +
+  theme(axis.ticks = element_blank(),
+        legend.position = "bottom")
+```
+
+The lollipop chart makes it easy for us to view the true difference in number of words per emotion for successful and unsuccessful campaigns. There's the largest difference in use of negative words; successful campaigns use plenty more of these than unsuccessful campaigns-- maybe the use of negative words adds to the drama of the project and leads to more backers? 
+
+```{r}
+# factor for ordering levels
+word_sent$sentiment <- factor(word_sent$sentiment, levels = c("positive", "joy", "trust", "anticipation", "negative", "anger", "surprise", "sadness", "disgust", "fear"))
+
+# plot
+ggplot(data = word_sent, aes(x = n, y = sentiment, color = success)) +
+  geom_segment(aes(x = 0, y = sentiment, xend = n, yend = sentiment), color = "lightgrey") +
+  geom_point(size = 2) +
+  scale_colour_manual(values=c('#8c510a','#01665e'), name = '') +
+  theme_tufte() +
+  labs(x = "Number of Words", y = "", title = 'Sentiment of Campaign Blurbs', 
+       subtitle = 'Unsuccessful campaigns express joy more than successful campaigns')
+
+
+```
+
 
 
 
