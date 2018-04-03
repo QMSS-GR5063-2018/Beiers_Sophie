@@ -29,9 +29,9 @@ To define “success,” I chose to create a ratio of pledged amount of money ov
 ![](../hw3/images/unnamed-chunk-2-1.png)
 
 #### Success in San Francisco
-I was curious to visualize success in San Francisco because it’s a tech hub and a hot spot for Kickstarter campaigns. Most campaigns from San Francisco received over 100% of their goal from their backers, so “success” took on a new definition: popularity. Larger bubbles had more backers and bubbles placed higher up on the graph received the most pledged money. The scales of the x axis versus the y axis tell us that no projects asked for over a million dollars, yet one received up to 6.5 million and multiple received multi-millions of dollars! Scroll over each bubble for more information about the project.
+I was curious to visualize success in San Francisco because it’s a tech hub and a hot spot for Kickstarter campaigns. Most campaigns from San Francisco received over 100% of their goal from their backers, so “success” took on a new definition: popularity. Larger bubbles had more backers and bubbles placed higher up on the graph received the most pledged money. The scales of the x axis versus the y axis tell us that no projects asked for over a million dollars, yet one received up to 6.5 million and multiple received multi-millions of dollars! Scroll over each bubble for more information about the project. (Only still image displayed here).
 
-![](../hw3/images/unnamed-chunk-3-1)
+![](../hw3/images/sf.png)
 
 ### Writing your success story
 Each project contains a blurb – a short description of the project. While not the full description of the project, the short headline is arguably important for inducing interest in the project (and ultimately popularity and success). Let’s analyze the text.
@@ -55,13 +55,13 @@ As expected “art” and other art-related words like “painting” and “mus
 
 These blurbs are short in length (max. 150 characters) but let’s see whether brevity and simplicity still matters. I calculated a readability measure (Flesh Kincaid) for the texts defined by the equation below (from Wikipedia):
 
-![](../h3/images/fk.png)
+![](../h3/images/f_k.png)
 
 Flesch Kincaid produces a number that defines how easy or difficult a chunk of text is based on what grade level in school should be able to read it. Anything that receives over a 90 is considered easy to read (a 5th grader could read it) and anything below a 30 is considered difficult and for college students to be able to read and understand. I then visualized the relationship between the Flesch Kincaid measure of the short blurb of the campaign and the number of backers each campaign had.
 
 I chose a different measure of “success” for this visualization: number of backers. From the visualization, we can see that most heavily-backed projects were in between -13 to 80 in terms of Flesch Kincaid scores. That’s a very large range! Most projects in general were left-skewed, but a few blurbs were so difficult to read they received negative scores. Those projects didn’t have the most backers but still received over a thousand. The most popular project (35550 backers) had a readability score of around 80, or, between a 6th and 7th grade level of reading.
 
-Hover over the circles for more information about each project.The larger the bubble, the more backers the project received.
+Hover over the circles for more information about each project.The larger the bubble, the more backers the project received. (Only still image displayed here).
 
 ![](../hw3/images/unnamed-chunk-6-1.png)
 
@@ -97,7 +97,7 @@ The lollipop chart makes it easy for us to view the true difference in number of
 
 
 ### Interactivity
-For interactive plots, please see the [HTML File](.hw3/output/Beiers_Kickstarter.html).
+For interactive plots, please see the [HTML File](.hw3/docs/Beiers_Kickstarter.html).
 
 
 ## References
