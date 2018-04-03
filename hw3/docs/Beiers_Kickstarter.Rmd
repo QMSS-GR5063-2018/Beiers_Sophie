@@ -64,16 +64,7 @@ ks <- read_csv("../data/kickstarter_projects.csv")
 
 ### a) Success by Category
 
-There are several ways to identify success of a project:
-  - State (`state`): Whether a campaign was successful or not.
-  - Pledged Amount (`pledged`)
-  - Achievement Ratio: Create a variable `achievement_ratio` by calculating the percentage of the original monetary `goal` divided by the actual amount `pledged`.  
-  - Number of backers (`backers_count`)
-  - How quickly the goal was reached (difference between `launched_at` and `state_changed_at`) for those campaigns that were successful.
-
-Use one or more of these measures to visually summarize which categories were most successful in attracting funding on kickstarter. Briefly summarize your findings.
-
-To defined "success," I chose to create a ratio of pledged amount of money over the monetary goal of the campaign. I removed any campaign with a goal of under $30 to ensure results were a little less skewed and eliminated any campaigns deemed unsuccessful since many of these campaigns dropped out or discontinued. I then broke out the results into categories of campaigns; we can see below that *all* campaign categories received an average of over 100% of their goal money, which is surprising! The technology category seems to have the most success while art campaigns were still highly successful (over 100% of goal money on average) but less exhorbitantly successful than other campaign categories. 
+To define "success," I chose to create a ratio of pledged amount of money over the monetary goal of the campaign. I removed any campaign with a goal of under $30 to ensure results were a little less skewed and eliminated any campaigns deemed unsuccessful since many of these campaigns dropped out or discontinued. I then broke out the results into categories of campaigns; we can see below that *all* campaign categories received an average of over 100% of their goal money, which is surprising! The technology category seems to have the most success while art campaigns were still highly successful (over 100% of goal money on average) but less exorbitantly successful than other campaign categories. 
 
 ```{r}
 ks$goal <- round(ks$goal, 0)
@@ -118,7 +109,7 @@ geom_bar(stat = "identity", fill = "#a8ddb5", alpha = 0.8) +
 
 ### b) Success in San Francisco
 
-I was curious to visualize success in San Francisco because it's a tech hub and a hot spot for Kickstarter campaigns. Most campaigns from San Francisco recieved *over* 100% of their goal from their backers, so "success" took on a new definition of popularity. Larger circles had more backers and circles placed higher up on the graph received the most pledged money. Scroll over each bubble for more information about the project.
+I was curious to visualize success in San Francisco because it's a tech hub and a hot spot for Kickstarter campaigns. Most campaigns from San Francisco received *over* 100% of their goal from their backers, so "success" took on a new definition: popularity. Larger bubbles had more backers and bubbles placed higher up on the graph received the most pledged money. The scales of the x axis versus the y axis tell us that no projects asked for over a million dollars, yet one received up to 6.5 million and multiple received multi-millions of dollars! Scroll over each bubble for more information about the project.
 
 ```{r}
 # filtered for goal over 100 this time
@@ -161,7 +152,7 @@ Each project contains a `blurb` -- a short description of the project. While not
 
 I selected the top 1000 most successful projects and the bottom 1000 least successful projects, then removed stop words, punctuation and numbers. I chose to not stem the words as to leave more of the meaning in the word cloud. I then created a document-term-matrix and term-document-matrix and visualized the most frequent words among the 1000 most successful projects in a word cloud.
 
-Most common words throughout all 2000 projects include "game," "art," "designed" and "homemade." Many of the kickstarter projects must be game-related, and it's not surprising that many projects are homemade and artistically designed! 
+Most common words throughout all 2000 projects include "game," "art," "designed" and "homemade." Many of the kickstarter projects must be game-related, and it's not surprising that many projects are "homemade" and "artistically" "designed" due to many people's hipster, DIY aesthetic these days.
 
 
 ```{r}
@@ -227,6 +218,8 @@ wordcloud(words = blurb_words_succ$word, freq = blurb_words_succ$nn, scale = c(5
 
 I then created a pyramid plot to show how the words between the most successful and unsuccessful projects differ in frequency. I selected the top 20 words used by the 1000 most successful and least successful campaigns. 
 
+As expected "art" and other art-related words like "painting" and "music" came up as some of the most common words unsuccessful campaigns use. We knew from our visualization earlier that art campaigns don't tend to do as well as other categories of campaigns. Again unsurprisingly, we knew from our wordcloud that "game" is shown as a word commonly used by successful campaigns. Games seem to be attractive to backers! "World" tends to be an equally used word from both successful and unsuccessful campaigns. 
+
 ```{r}
 # df for unsuccessful projects
 blurb_words_unsucc <- blurb_words %>%
@@ -249,18 +242,24 @@ arrange(desc(nn)) %>%
   slice(1:20)
 
 # combine data frames
-blurb_wrds_20 <- rbind(blurb_words_unsucc20, blurb_words_succ20)
-blurb_wrds_20$nn <- ifelse(blurb_wrds_20$success == "Unsuccessful", blurb_wrds_20$nn * -1, blurb_wrds_20$nn) # turn unsuccessful numbers negative
+blurb_wrds_20 <- blurb_words %>% 
+  filter(word %in% blurb_words_succ20$word| word %in% blurb_words_unsucc20$word) %>% 
+  filter(id %in% bottom1000$id| id %in% top1000$id) %>% 
+  ungroup()
+blurb_wrds_20$success <- ifelse(blurb_wrds_20$id %in% bottom1000$id, "Unsuccessful", "Successful")
+  
+blurb_wrds_20$n <- ifelse(blurb_wrds_20$success == "Unsuccessful", blurb_wrds_20$n * -1, blurb_wrds_20$n) # turn unsuccessful numbers negative
 
-blurb_wrds_20$row <- row_number(blurb_wrds_20$word)
+blurb_wrds_20 <- na.omit(blurb_wrds_20)
+
 
 # pyramid plot
-ggplot(blurb_wrds_20, aes(x = reorder(word, nn), y = nn, fill = success)) +
+ggplot(blurb_wrds_20, aes(x = reorder(word, -n), y = n, fill = success)) +
   geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Successful"), stat = "identity") +  
-  geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Unsuccessful"), stat = "identity") + 
+  geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Unsuccessful"), stat = "identity") +
   coord_flip() +
   scale_fill_manual(values=c("#a8ddb5", "#0868ac"), name = '') +
-  labs(y = '', x = '') +
+  labs(y = '', x = '', title = 'Words Most Commonly Used by Successful and Unsuccessful Kickstarter Campaigns') +
   theme_tufte() +
   theme(axis.ticks = element_blank()) +
   theme(legend.position = "top")
@@ -274,9 +273,9 @@ These blurbs are short in length (max. 150 characters) but let's see whether bre
 
 Flesch Kincaid produces a number that defines how easy or difficult a chunk of text is based on what grade level in school should be able to read it. Anything that receives over a 90 is considered easy to read (a 5th grader could read it) and anything below a 30 is considered difficult and for college students to be able to read and understand. I then visualized the relationship between the Flesch Kincaid measure of the short blurb of the campaign and the number of backers each campaign had. 
 
-From the visualization, we can see that most heavily-backed projects were in between -13 to 80 in terms of Flesch Kincaid scores. That's a very large range! Most projects in general were left-skewed, but a few blurbs were so difficult to read they received negative scores. Those projects didn't have the most backers but still received over a thousand. 
+I chose a different measure of "success" for this visualization: number of backers. From the visualization, we can see that most heavily-backed projects were in between -13 to 80 in terms of Flesch Kincaid scores. That's a very large range! Most projects in general were left-skewed, but a few blurbs were so difficult to read they received negative scores. Those projects didn't have the most backers but still received over a thousand. The most popular project (35550 backers) had a readability score of around 80, or, between a 6th and 7th grade level of reading. 
 
-Hover over the circles for more information about each project.The larger the circle, the more backers the project received.
+Hover over the circles for more information about each project.The larger the bubble, the more backers the project received.
 
 ```{r}
 #blurb_words_2000 <- rbind(blurb_words_succ, blurb_words_unsucc)
@@ -296,7 +295,7 @@ fk <- merge(fk, projects, by = "id")
 fk$fk_score <- (206.835 - (1.015*(fk$total_words/fk$sentences)) - (84.6*(fk$total_syllables/fk$total_words)))
 
 # summarizing by ids
-na.omit(fk <- fk %>% 
+fk <- na.omit(fk %>% 
   group_by(id) %>% 
   select(id, fk_score) %>% 
   unique())
@@ -336,7 +335,7 @@ Now, let's check whether the use of positive / negative words or specific emotio
 
 ### a) Stay positive
 
-I calculate the tone of each text using the AFINN lexicon based on the positive and negative words used in each blurb. AFINN assigns a positive or negative score to each word (between -5 and 5) depending on how positive or negative the sentiment attached to the word is. I calculated a cumulative measure of negativity or positivity per blurb by adding up the scores on each individual word. Below, I visualized the relationship between the tone of the blurb and success. 
+I calculated the tone of each text using the AFINN lexicon based on the positive and negative words used in each blurb. AFINN assigns a positive or negative score to each word (between -5 and 5) depending on how positive or negative the sentiment attached to the word is. I calculated a cumulative measure of negativity or positivity per blurb by adding up the scores on each individual word. Below, I visualized the relationship between the tone of the blurb and success. 
 
 While quite similar in nature in terms of the number of and magnitude of positive and negative words used in each blurb, less successful projects used a larger range of extreme positive or extreme negative words. Both successful and unsuccessful projects mainly use positive words (with a score above 0 averaging around a score of 3) overall. 
 
@@ -354,7 +353,7 @@ word_sent <- word_sent %>%
   dplyr::filter(id %in% top1000$id| id %in% bottom1000$id)
 word_sent$success <- ifelse(word_sent$id %in% top1000$id, "Most Successful", "Least Successful")
 
-
+# an idea to get a cummulative score; would've worked better for over time.
 # x = 0
 # for (i in seq(1:985)) {
 #   blurb_sent_succ$cumm_score[i] <- blurb_sent_succ$score[i] + x
@@ -391,7 +390,7 @@ I segregated all 2,000 blurbs into positive and negative texts based on their po
 
 Negative words most frequently include the use of "limited," which is funny only because often times a "limited edition" is seen as a good thing! Other frequent negative terms include "hard," "battle," "lost" and "fight."
 
-Frequent positive words include "inspired," "love," "easy" and "share."
+Frequent positive words include "inspired," "love," "easy" and "share." These seem like lifestyle words, as in projects that might include making someone's life easier. 
 ```{r}
 # neg and pos grouping 
 word_sent$negpos <- ifelse(word_sent$score < 0, "negative", "positive")
@@ -408,7 +407,7 @@ comparison.cloud(tdm_pn_mat, colors = c("#a8ddb5", "#0868ac"), scale = c(5, 0.5)
 
 ### c) Get in their mind
 
-Lastly, I used the NRC Word-Emotion Association Lexicon to identify a larger set of emotions (anger, anticipation, disgust, fear, joy, sadness, surprise, trust). I visualized the relationship between success and range of emotions in two different ways; first with a bar chart and second with a lollipop chart. We can see in both that successful compaigns tend to use more of every type of emotional word except for "joy," for which unsuccessful campaigns use more. 
+Lastly, I used the NRC Word-Emotion Association Lexicon to identify a larger set of emotions (anger, anticipation, disgust, fear, joy, sadness, surprise, trust). I visualized the relationship between success and range of emotions in two different ways; first with a bar chart and second with a lollipop chart. We can see in both that successful campaigns tend to use more of every type of emotional word except for "joy," for which unsuccessful campaigns use more. 
 
 ```{r}
 # join nrc sentiment
