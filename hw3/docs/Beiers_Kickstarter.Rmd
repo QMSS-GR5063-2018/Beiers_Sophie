@@ -251,25 +251,30 @@ blurb_wrds_20$success <- ifelse(blurb_wrds_20$id %in% bottom1000$id, "Unsuccessf
 blurb_wrds_20$n <- ifelse(blurb_wrds_20$success == "Unsuccessful", blurb_wrds_20$n * -1, blurb_wrds_20$n) # turn unsuccessful numbers negative
 
 blurb_wrds_20 <- na.omit(blurb_wrds_20)
-
+blurb_wrds_20$word[blurb_wrds_20$word == "paintings"|blurb_wrds_20$word == "painting"] <- "paint"
+blurb_wrds_20$word[blurb_wrds_20$word == "artists"] <- "artist"
 
 # pyramid plot
-ggplot(blurb_wrds_20, aes(x = reorder(word, -n), y = n, fill = success)) +
-  geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Successful"), stat = "identity") +  
-  geom_bar(data = dplyr::filter(blurb_wrds_20, success == "Unsuccessful"), stat = "identity") +
+
+ggplot(data = blurb_wrds_20, 
+       aes(x = reorder(word, n), 
+           y = n, 
+           fill = success)) + 
+  geom_bar(stat="identity")   + 
   coord_flip() +
   scale_fill_manual(values=c("#a8ddb5", "#0868ac"), name = '') +
   labs(y = '', x = '', title = 'Words Most Commonly Used by Successful and Unsuccessful Kickstarter Campaigns') +
   theme_tufte() +
   theme(axis.ticks = element_blank()) +
   theme(legend.position = "top")
+
 ```
 
 
 ### c) Simplicity as a virtue
 
 These blurbs are short in length (max. 150 characters) but let's see whether brevity and simplicity still matters. I calculated a readability measure (Flesh Kincaid) for the texts defined by the equation below (from Wikipedia):  
-![](../images/fk.png)
+![](../images/f_k.png)
 
 Flesch Kincaid produces a number that defines how easy or difficult a chunk of text is based on what grade level in school should be able to read it. Anything that receives over a 90 is considered easy to read (a 5th grader could read it) and anything below a 30 is considered difficult and for college students to be able to read and understand. I then visualized the relationship between the Flesch Kincaid measure of the short blurb of the campaign and the number of backers each campaign had. 
 
