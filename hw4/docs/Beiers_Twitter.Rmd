@@ -1,0 +1,106 @@
+---
+title: "Beiers_Twitter"
+author: "Sophie Beiers"
+date: "4/5/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+```
+# Tweets by US Senators
+## Data
+The data contains about 170k tweets and about 40 variables. Please note, that the API limit of 3,200 tweets per twitter handle actually cuts down the time period we can observe the most prolific Twitter users in the Senate down to only about one year into the past.
+```{r}
+tweets <- readRDS("../data/senator_tweets.RDS")
+follows <- read_csv("../data/senators_follow.csv")
+twitter <- read_csv("../data/senators_twitter.csv")
+
+# How limiting is the API limit?
+# 59 senators, last tweet from Jan 5, 2018
+tweets %>% 
+  group_by(screen_name) %>% 
+  summarize(n_tweet = n(),
+            oldest_tweet = min(created_at)) %>%
+  arrange(desc(oldest_tweet))
+```
+
+## Who Follows Whom?
+### Network of Followers
+```{r}
+# out = who i follow
+# in = who follows me 
+
+follows$following <- as.numeric(ifelse(follows$following == T, 1, 0))
+follows$followed_by <- ifelse(follows$followed_by == T, 1, 0)
+
+net_follows <- follows %>% 
+  group_by(source) %>% 
+  summarize(n_following = sum(following), n_followed_by = sum(followed_by))
+
+# the top senators following the most of their colleagues are Collins, McCain and Murkowski
+top_following <- net_follows %>% 
+  arrange(desc(n_following)) %>% 
+  slice(1:3)
+
+top_following$source 
+
+# the senators followed by the largest amount of their colleagues Merkley, Warner, Kennedy and Markey 
+top_followed_by <- net_follows %>% 
+  arrange(desc(n_followed_by)) %>% 
+  slice(1:4)
+
+top_followed_by$source 
+
+kable(top_followed_by)
+```
+
+### Communities
+```{r}
+
+```
+
+
+
+## What do they Tweet About?
+### Most Common Topics Over Time
+```{r}
+
+```
+
+### Democrats v. Republicans
+```{r}
+
+```
+
+### Gun Control 1 -- Dem v. Rep
+```{r}
+
+```
+
+### Gun Control 2 -- Parkland Shooting
+```{r}
+
+```
+
+
+## Are You Talking to Me?
+### Identifying Re-Tweets
+```{r}
+
+```
+
+### Identifying Mentions
+```{r}
+
+```
+
+### Who is Popular on Twitter? 
+```{r}
+
+```
+
+
+
