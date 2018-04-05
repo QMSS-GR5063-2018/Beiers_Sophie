@@ -251,8 +251,10 @@ blurb_wrds_20$success <- ifelse(blurb_wrds_20$id %in% bottom1000$id, "Unsuccessf
 blurb_wrds_20$n <- ifelse(blurb_wrds_20$success == "Unsuccessful", blurb_wrds_20$n * -1, blurb_wrds_20$n) # turn unsuccessful numbers negative
 
 blurb_wrds_20 <- na.omit(blurb_wrds_20)
+# stem some words 
 blurb_wrds_20$word[blurb_wrds_20$word == "paintings"|blurb_wrds_20$word == "painting"] <- "paint"
 blurb_wrds_20$word[blurb_wrds_20$word == "artists"] <- "artist"
+blurb_wrds_20$word[blurb_wrds_20$word == "creating"] <- "create"
 
 # pyramid plot
 
