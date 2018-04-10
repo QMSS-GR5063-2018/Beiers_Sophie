@@ -7,9 +7,22 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+setwd("~/Documents/GitHub/Beiers_Sophie/hw4/docs")
 library(tidyverse)
 library(lubridate)
+library(igraph)
+library(ggnetwork)
+library(intergraph)    
+library(ggrepel)      
+library(svgPanZoom)    
+# library(SVGAnnotation) 
+library(DT) 
+library(networkD3)
+library(ggthemes)
+library(ggridges)
+library(emojifont)
 ```
+
 # Tweets by US Senators
 ## Data
 The data contains about 170k tweets and about 40 variables. Please note, that the API limit of 3,200 tweets per twitter handle actually cuts down the time period we can observe the most prolific Twitter users in the Senate down to only about one year into the past.
@@ -19,7 +32,7 @@ follows <- read_csv("../data/senators_follow.csv")
 twitter <- read_csv("../data/senators_twitter.csv")
 
 # How limiting is the API limit?
-# 59 senators, last tweet from Jan 5, 2018
+# 100 senators
 tweets %>% 
   group_by(screen_name) %>% 
   summarize(n_tweet = n(),
@@ -29,10 +42,14 @@ tweets %>%
 
 ## Who Follows Whom?
 ### Network of Followers
+Visualize the network of senators. In the visualization, highlight the party ID of the senator nodes with an appropriate color (blue = Democrat, red = Republican) and size the nodes by the centrality of the nodes to the network. 
 ```{r}
-# out = who i follow
-# in = who follows me 
+twitter['official_twitter'] <- twitter['Official Twitter']
+twitter['party'] <- twitter['Party affiliation']
+# get party info
+follows <- merge(follows, twitter[, c("official_twitter", "party")], by.x = "source", by.y = "official_twitter")
 
+# followed or followed by as dummies
 follows$following <- as.numeric(ifelse(follows$following == T, 1, 0))
 follows$followed_by <- ifelse(follows$followed_by == T, 1, 0)
 
@@ -47,19 +64,106 @@ top_following <- net_follows %>%
 
 top_following$source 
 
-# the senators followed by the largest amount of their colleagues Merkley, Warner, Kennedy and Markey 
+# the senators followed by the largest amount of their colleagues Merkley, Warner, Kennedy 
 top_followed_by <- net_follows %>% 
   arrange(desc(n_followed_by)) %>% 
-  slice(1:4)
+  slice(1:3)
 
-top_followed_by$source 
+top_followed_by$source
 
-kable(top_followed_by)
+```
+```{r}
+# data set-up 
+sub_following <- subset(follows, follows$following == 1)
+gr <- graph_from_data_frame(sub_following[,c("source", "target")], 
+                            directed=FALSE)
+
+V(gr)$size <- centralization.degree(gr)$res
+E(gr)$weight <- 1
+edges <- simplify(gr, edge.attr.comb="sum")
+connections <- ggnetwork(edges, layout="fruchtermanreingold", 
+                arrow.gap =0, cell.jitter=0)
+
+write_csv(connections,"connections.csv")
+connections <- read_csv("connections.csv")
+connections <- dplyr::as_data_frame(connections)
+connections <- merge(connections, twitter[c("official_twitter", "party")], by.x = "vertex.names", by.y = "official_twitter")
+connections <- connections %>% 
+  select(x, y, na.x, size, vertex.names, xend, yend, na.y, weight, party)
+connections$stars <- as.factor(ifelse(connections$vertex.names %in% top_followed_by$source, 1, 0))
+
+# visualizing network 
+ggplot() +
+  geom_edges(data = connections, 
+             aes(x = x, y = y, xend = xend, yend = yend),
+             color = "darkgrey", curvature = 0.1, size = 0.1, alpha = 0.5) +
+  geom_nodes(data=connections,
+             aes(x = x, y = y, xend = xend, yend = yend, 
+                 color = party, size = sqrt(size)), alpha = 0.7) +
+  geom_label_repel(data = unique(connections[connections$size > 100, c(1, 2, 5)]),
+                   aes(x = x, y = y, label = vertex.names), 
+                    size = 2.5) +
+  scale_color_manual(values=c("blue", "yellow", "red"), name = '') +
+  theme_blank() +
+  theme(legend.position="none") 
+
 ```
 
-### Communities
-```{r}
 
+
+### Communities
+Now let’s see whether party identification is also recovered by an automated mechanism of cluster identification. Use the cluster_walktrap command in the igraph package to find densely connected subgraphs.
+
+Based on the results, visualize how well this automated community detection mechanism recovers the party affiliation of senators. This visualization need not be a network graph. Comment briefly.
+```{r}
+# find "communities/groups"
+wc <- cluster_walktrap(g)  
+members <- membership(wc)
+
+# transform members into DF
+com <- as.numeric(members)
+names <- names(members)
+mem <- data_frame(names, com)
+
+# get party info
+mem <- merge(mem, twitter[c("official_twitter", "party")], by.x = "names", by.y = "official_twitter")
+
+# rename
+mem$party[mem$party == 'Republican Party'] <- 'Republican'
+mem$party[mem$party == 'Democratic Party'] <- 'Democrat'
+mem$party[mem$party == 'Independent Party'] <- 'Independent'
+mem$com[mem$com == 1] <- 'Group One'
+mem$com[mem$com == 2] <- 'Group Two'
+
+
+# plot
+ggplot(data = mem, aes(x = party)) + 
+  geom_bar(aes(fill = party), alpha = 0.8) +
+  scale_fill_manual(values=c("blue", "yellow", "red"), name = '') +
+  facet_wrap(~com) +
+  theme_minimal() +
+  theme(strip.background = element_rect(fill = "transparent")) +
+  labs(x = '', y = '# of Members\n', 
+       title = "US Senator Twitter Communities", 
+       subtitle = "Same political parties clustered together")
+  
+```
+### Interactive For Fun
+```{r}
+# Convert igraph object to object suitable for networkD3
+sen_d3 <- igraph_to_networkD3(g, group = members)
+
+# Create force directed network plot
+forceNetwork(Links = sen_d3$links, Nodes = sen_d3$nodes, 
+             Source = 'source', 
+             Target = 'target', 
+             NodeID = 'name', 
+             Group = 'group', 
+             charge = -50,
+             linkDistance = 20, 
+             zoom = T, 
+             opacity = 1, 
+             fontSize = 30)
 ```
 
 
@@ -67,32 +171,170 @@ kable(top_followed_by)
 ## What do they Tweet About?
 ### Most Common Topics Over Time
 ```{r}
+# merge in party info 
+tweets <- merge(tweets, twitter[, c('party', 'official_twitter')], by.x = 'screen_name', by.y = 'official_twitter')
+# rid of tweets that are retweets
+tweets_clean <- tweets %>% 
+  filter(is_retweet == FALSE) %>% 
+  unnest(hashtags) %>% 
+  filter(!is.na(hashtags))
+
+tweets_clean$hashtags <- tolower(tweets_clean$hashtags)
+
+top_tweets <- tweets_clean %>% 
+  group_by(hashtags) %>%
+  count(hashtags, sort = TRUE) %>%
+  ungroup() %>% 
+  slice(1:20)
+
+library(emojifont)
+ggplot(data = top_tweets, aes(x = reorder(hashtags, n), y = n)) +
+geom_bar(stat = "identity", fill = "#00aced", alpha = 0.8) + 
+  coord_flip() + theme_tufte() + 
+  geom_text(aes(label = hashtags, x = hashtags, y = 1), hjust = 0,
+            size = 4, family = 'serif', color = "black") +
+  geom_fontawesome("fa-twitter", color='black', size = 10, x = "taxreform", y = 1800) +
+  theme(axis.title = element_blank(), 
+        axis.text.y =  element_blank(), 
+        axis.ticks = element_blank()) +
+  labs(x = '', 
+       title = "Top 20 Most Popular #Hashtags Over Time", 
+       subtitle = "Number of times hashtag was used")
+
+# twitter official color palette
+colors <- c("#0084b4", "#00aced", "#1dcaff", "#c0deed")
 
 ```
 
 ### Democrats v. Republicans
 ```{r}
+# transform to date 
+tweets_clean$created_at <- as.POSIXct(strptime(tweets_clean$created_at, "%Y-%m-%d"))
 
+# round time time to after Jan 2016
+sub_tweets <- subset(tweets_clean, created_at > "2016-01-01")
+
+# identify top 15 hashtags by each party
+top_party_tweets <- sub_tweets %>% 
+  group_by(hashtags, party) %>%
+  count(hashtags, sort = TRUE) %>%
+  ungroup() %>% 
+  slice(1:15)
+
+# over time 
+tweets_time <- sub_tweets %>% 
+  filter(hashtags %in% top_party_tweets$hashtags) %>% 
+  group_by(created_at, party) %>% 
+  count(hashtags) %>% 
+  ungroup()
+
+# plot
+ggplot(data = tweets_time, aes(created_at, as.factor(hashtags))) + 
+  geom_density_ridges(data = filter(tweets_time, tweets_time$party == "Democratic Party"), 
+                      aes(fill = party), alpha = 0.6, size = 0.2)  +
+  geom_density_ridges(data = filter(tweets_time, tweets_time$party == "Republican Party"), 
+                      aes(fill = party), alpha = 0.6, size = 0.2) +
+  scale_fill_manual(values=c("blue","red"), name = "") +
+  scale_y_discrete(labels=function(x) paste0("#", x)) +
+  theme_minimal() +
+  labs(x = '', y = '', title = 'Popular Hashtags by Political Party', 
+       subtitle = 'Senator Tweets: 2016-2018 \n') +
+  theme(legend.position = 'bottom') 
+  
+  
 ```
 
 ### Gun Control 1 -- Dem v. Rep
 ```{r}
+# list of hashtags related to gun control and gun rights
+guncontrol <- c("guncontrolnow", "gunsense", "time", "commonsense", "gunviolence", "marchforourlives", "gunreform", "nationalwalkoutday", "enoughisenough", "gunreformnow")
+gunrights <- c("nra", "secondamendment", "carry", "freedom", "firearms", "backgroundchecks")
 
+# DF with only gun related hashtags
+gun_tweets <- sub_tweets %>% 
+  filter(party != "Independent") %>% 
+  filter(hashtags %in% guncontrol| hashtags %in% gunrights) %>% 
+  group_by(party) %>% 
+  count(hashtags) %>% 
+  ungroup()
+
+gun_tweets$n <- ifelse(gun_tweets$party == "Republican Party", gun_tweets$n * -1, gun_tweets$n)
+
+
+# diverging lolipop chart
+ggplot(data = gun_tweets, 
+       aes(x = reorder(hashtags, n), 
+           y = n)) + 
+  geom_point(stat="identity",  size = 3, aes(col = party))   + 
+  geom_segment(aes(y = 0,
+                   x = hashtags,
+                   yend = n,
+                   xend = hashtags,
+                   col = party
+                   ), size = 0.2) +
+  geom_fontawesome("fa-twitter", color='black', size = 6, 
+                   x = "nationalwalkoutday", y = 72, nudge_x = 0.2) +
+  scale_color_manual(values=c("blue", "red"), name = '') +
+  coord_flip() +
+  scale_x_discrete(labels=function(x) paste0("#", x)) +
+  labs(y = '', x = '', title = 'Gun Control Hashtags', 
+       subtitle = 'Republican Senators fairly silent about guns \n \n') +
+  theme_minimal() +
+  theme(axis.ticks = element_blank()) +
+  theme(legend.position = "bottom")
 ```
 
 ### Gun Control 2 -- Parkland Shooting
-```{r}
+
+To look into how senators reacted to the Parkland shooting, I narrowed the time-range for tweets to one month after the shooting. 
+```{r guncontrol2}
+# identified hashtags used during the month after Parkland shooting related to Parkland
+parkland_tweets <- subset(tweets_clean, created_at >= "2018-02-14" & created_at <= "2018-03-15")
+parkland_tweets$hashtags <- ifelse(parkland_tweets$hashtags == "nationalschoolwalkout", "nationalwalkoutday", parkland_tweets$hashtags)
+parkland_hashtags <- c("parkland", "gunreformnow", "parklandshooting", "neveragain", "parklandshooting", "endgunviolence", "enoughisenough", "nationalwalkoutday", "enoughisenough", "enough", "nationalschoolwalkout", "parkland",  "msdstrong", "florida",  "stopschoolviolenceact", "parklandshooting", "parkland", "gunreform", "banassaultweapons", "marchforourlives", "nationalwalkoutday")
+
+# df of just those hashtags
+parkland_time <- parkland_tweets %>% 
+  filter(hashtags %in% parkland_hashtags) %>% 
+  filter(party != "Independent") %>% 
+  group_by(created_at, party) %>% 
+  count(hashtags, sort = TRUE) %>% 
+  ungroup()
+
+# ridges plot over time between parties
+ggplot(data = parkland_time, aes(created_at, as.factor(hashtags))) + 
+  geom_density_ridges(data = filter(parkland_time, 
+                                    parkland_time$party == "Democratic Party"), 
+                      aes(fill = party), 
+                      alpha = 0.8, 
+                      size = 0.2)  +
+  geom_density_ridges(data = filter(parkland_time, 
+                                    parkland_time$party == "Republican Party"), 
+                      aes(fill = party), 
+                      alpha = 0.8, 
+                      size = 0.2) +
+  scale_fill_manual(values=c("blue","red"), name = "") +
+  scale_y_discrete(labels=function(x) paste0("#", x)) +
+  theme_minimal() +
+  labs(x = '', y = '', 
+       title = 'Popular Parkland Shooting Hashtags by Political Party', 
+       subtitle = 'Senator Tweets: Feb 14, 2018 - Mar 15, 2018 \n') +
+  theme(legend.position = 'none') +
+  facet_wrap(~party)
+
 
 ```
 
 
 ## Are You Talking to Me?
 ### Identifying Re-Tweets
+Often tweets are simply public statements without addressing a specific audience. However, it is possible to interact with a specific person by adding them as a friend, becoming their follower, re-tweeting their messages, and/or mentioning them in a tweet using the @ symbol. Select the set of re-tweeted messages from other senators and identify the source of the originating message. Calculate by senator the amount of re-tweets they received and from which party these re-tweets came. Essentially, I would like to visualize whether senators largely re-tweet their own party colleagues’ messages or whether there are some senators that get re-tweeted on both sides of the aisle. Visualize the result.
 ```{r}
 
 ```
 
 ### Identifying Mentions
+Identify the tweets in which one senator mentions another senator directly (the variable is mentions_screen_name). For this example, please remove simple re-tweets (is_retweet == FALSE). Calculate who re-tweets whom among the senate members. Convert the information to an undirected graph object in which the number of mentions is the strength of the relationship between senators. Visualize the network graph using the party identification of the senators as a group variable (use blue for Democrats and red for Republicans) and some graph centrality measure to size the nodes. Comment on what you can see from the visualization.
 ```{r}
 
 ```
