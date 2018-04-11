@@ -76,7 +76,7 @@ top_followed_by$source
 # data set-up 
 sub_following <- subset(follows, follows$following == 1)
 gr <- graph_from_data_frame(sub_following[,c("source", "target")], 
-                            directed=FALSE)
+                            directed = FALSE)
 
 V(gr)$size <- centralization.degree(gr)$res
 E(gr)$weight <- 1
@@ -187,7 +187,7 @@ top_tweets <- tweets_clean %>%
   ungroup() %>% 
   slice(1:20)
 
-library(emojifont)
+
 ggplot(data = top_tweets, aes(x = reorder(hashtags, n), y = n)) +
 geom_bar(stat = "identity", fill = "#00aced", alpha = 0.8) + 
   coord_flip() + theme_tufte() + 
@@ -330,6 +330,67 @@ ggplot(data = parkland_time, aes(created_at, as.factor(hashtags))) +
 ### Identifying Re-Tweets
 Often tweets are simply public statements without addressing a specific audience. However, it is possible to interact with a specific person by adding them as a friend, becoming their follower, re-tweeting their messages, and/or mentioning them in a tweet using the @ symbol. Select the set of re-tweeted messages from other senators and identify the source of the originating message. Calculate by senator the amount of re-tweets they received and from which party these re-tweets came. Essentially, I would like to visualize whether senators largely re-tweet their own party colleagues’ messages or whether there are some senators that get re-tweeted on both sides of the aisle. Visualize the result.
 ```{r}
+retweets <- tweets %>% 
+  filter(is_retweet == TRUE)
+
+# find who retweeted about 
+retweets$rt_user <- gsub( ":.*$", "", retweets$text)
+retweets$rt_user <- gsub( "RT @", "", retweets$rt_user)
+# change col name
+retweets$user_party <- retweets$party
+retweets <- select(retweets, screen_name, user_party, rt_user)
+# new df to find party of retweeted user
+user_party <- retweets[retweets$rt_user %in% retweets$screen_name, cbind("rt_user" , "user_party")]
+colnames(user_party)[2] <- "rt_user_party" 
+# merge together 
+retweets <- merge(user_party, retweets, by = "rt_user")
+retweets$count <- rep(1, nrow(retweets))
+
+test <- retweets %>% 
+  group_by(screen_name, user_party, rt_user_party) %>% 
+  summarise(len = length(rt_user_party)) %>% 
+  ungroup()
+test <- spread(test, rt_user_party, len)
+test[is.na(test)] <- 0
+
+test2 <- test %>% 
+  mutate(Independent = Independent * -1) %>% 
+  mutate(Ind.Dem = Independent + Democrat) %>% 
+  mutate(Ind.Rep = Independent + Republican)
+
+colnames(test)[3] <- "Democrat"
+colnames(test)[5] <- "Republican"
+
+
+# scatter plot
+ggplot(data = test2, aes(x = Ind.Dem, y = Ind.Rep, color = user_party)) +
+  geom_point() +
+  scale_color_manual(values=c("blue","yellow", "red"), name = "Senator's Political Party") +
+  theme_minimal()+
+  theme(legend.position = "right") +
+  labs(x = '', y = '', title = 'Senators Largely Retweet Own Party', subtitle = '') +
+  geom_label_repel(data = test2[test2$Republican > 6000|test2$Democrat > 6000|test2$Independent < -500,],
+                   aes(label = screen_name), 
+                    size = 2, color = "black") +
+  ggplot2::annotate(geom = "text", x = 12500, y = 10000,  # right arrow
+                    label = "More Dem RTs", size = 3) +
+  geom_segment(aes(x = 10000, xend = 12500 , y = 9000, yend = 9000),
+                     arrow = arrow(length = unit(0.2,"cm")), color = "blue") +
+  ggplot2::annotate("text", x = 7000, y = 10000,  # left arrow
+                    label = "More Ind RTs",
+                    size = 3) +
+        geom_segment(aes(x = 10000, xend = 7500 , y = 9000, yend = 9000),
+                     arrow = arrow(length = unit(0.2,"cm")), color = "yellow") +
+  ggplot2::annotate("text", x = 10000, y = 5000,  # down arrow
+                    label = "More Ind RTs",  
+                    size = 3) +
+        geom_segment(aes(x = 10000, xend = 10000 , y = 9000, yend = 6000),
+                     arrow = arrow(length = unit(0.2,"cm")), color = "yellow") +
+  ggplot2::annotate("text", x = 10000, y = 12500,  # up arrow
+                    label = "More Rep RTs",  
+                    size = 3) +
+        geom_segment(aes(x = 10000, xend = 10000 , y = 9000, yend = 12000),
+                     arrow = arrow(length = unit(0.2,"cm")), color = "red")
 
 ```
 
