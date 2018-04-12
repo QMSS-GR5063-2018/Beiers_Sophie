@@ -32,20 +32,42 @@ follows <- read_csv("../data/senators_follow.csv")
 twitter <- read_csv("../data/senators_twitter.csv")
 
 # How limiting is the API limit?
-# 100 senators
-tweets %>% 
+
+# looking for most prolific democratic, republican and independent tweeters 
+freq_tweeters <- tweets %>% 
   group_by(screen_name) %>% 
   summarize(n_tweet = n(),
             oldest_tweet = min(created_at)) %>%
-  arrange(desc(oldest_tweet))
+  arrange(desc(oldest_tweet)) %>% 
+  ungroup()
+
+twitter['official_twitter'] <- twitter['Official Twitter']
+twitter['party'] <- twitter['Party affiliation']
+
+freq_tweeters <- merge(freq_tweeters, twitter[, c("official_twitter", "party")], by.x = "screen_name", by.y = "official_twitter")
+
+freq_tweeters_d <- freq_tweeters %>% 
+  filter(party == "Democratic Party") %>% 
+  arrange(desc(n_tweet)) %>% 
+  slice(1:20)
+
+freq_tweeters_r <- freq_tweeters %>% 
+  filter(party == "Republican Party") %>% 
+  arrange(desc(n_tweet)) %>% 
+  slice(1:20)
+
+freq_tweeters_i <- freq_tweeters %>% 
+  filter(party == "Independent") %>% 
+  arrange(desc(n_tweet)) %>% 
+  slice(1:20)
+  
 ```
 
 ## Who Follows Whom?
 ### Network of Followers
 Visualize the network of senators. In the visualization, highlight the party ID of the senator nodes with an appropriate color (blue = Democrat, red = Republican) and size the nodes by the centrality of the nodes to the network. 
 ```{r}
-twitter['official_twitter'] <- twitter['Official Twitter']
-twitter['party'] <- twitter['Party affiliation']
+
 # get party info
 follows <- merge(follows, twitter[, c("official_twitter", "party")], by.x = "source", by.y = "official_twitter")
 
@@ -346,24 +368,30 @@ colnames(user_party)[2] <- "rt_user_party"
 retweets <- merge(user_party, retweets, by = "rt_user")
 retweets$count <- rep(1, nrow(retweets))
 
-test <- retweets %>% 
+rt1 <- retweets %>% 
   group_by(screen_name, user_party, rt_user_party) %>% 
   summarise(len = length(rt_user_party)) %>% 
   ungroup()
-test <- spread(test, rt_user_party, len)
-test[is.na(test)] <- 0
+rt1 <- spread(rt1, rt_user_party, len)
+rt1[is.na(rt1)] <- 0
 
-test2 <- test %>% 
+colnames(rt1)[3] <- "Democrat"
+colnames(rt1)[5] <- "Republican"
+
+rt2 <- rt1 %>% 
+  mutate(total_tweets = Independent + Republican + Democrat) %>% 
+  mutate(I_prop = round(Independent/total_tweets * 100, 2), 
+         R_prop = round(Republican/total_tweets * 100,2), 
+         D_prop = round(Democrat/total_tweets * 100, 2)) %>% 
   mutate(Independent = Independent * -1) %>% 
   mutate(Ind.Dem = Independent + Democrat) %>% 
   mutate(Ind.Rep = Independent + Republican)
 
-colnames(test)[3] <- "Democrat"
-colnames(test)[5] <- "Republican"
+
 
 
 # scatter plot
-ggplot(data = test2, aes(x = Ind.Dem, y = Ind.Rep, color = user_party)) +
+ggplot(data = rt2, aes(x = Ind.Dem, y = Ind.Rep, color = user_party)) +
   geom_point() +
   scale_color_manual(values=c("blue","yellow", "red"), name = "Senator's Political Party") +
   theme_minimal()+
@@ -374,25 +402,85 @@ ggplot(data = test2, aes(x = Ind.Dem, y = Ind.Rep, color = user_party)) +
                     size = 2, color = "black") +
   ggplot2::annotate(geom = "text", x = 12500, y = 10000,  # right arrow
                     label = "More Dem RTs", size = 3) +
-  geom_segment(aes(x = 10000, xend = 12500 , y = 9000, yend = 9000),
+  geom_segment(aes(x = 10000, xend = 11500 , y = 9000, yend = 9000),
                      arrow = arrow(length = unit(0.2,"cm")), color = "blue") +
   ggplot2::annotate("text", x = 7000, y = 10000,  # left arrow
                     label = "More Ind RTs",
                     size = 3) +
-        geom_segment(aes(x = 10000, xend = 7500 , y = 9000, yend = 9000),
+        geom_segment(aes(x = 10000, xend = 8500 , y = 9000, yend = 9000),
                      arrow = arrow(length = unit(0.2,"cm")), color = "yellow") +
   ggplot2::annotate("text", x = 10000, y = 5000,  # down arrow
                     label = "More Ind RTs",  
                     size = 3) +
-        geom_segment(aes(x = 10000, xend = 10000 , y = 9000, yend = 6000),
+        geom_segment(aes(x = 10000, xend = 10000 , y = 9000, yend = 7000),
                      arrow = arrow(length = unit(0.2,"cm")), color = "yellow") +
   ggplot2::annotate("text", x = 10000, y = 12500,  # up arrow
                     label = "More Rep RTs",  
                     size = 3) +
-        geom_segment(aes(x = 10000, xend = 10000 , y = 9000, yend = 12000),
+        geom_segment(aes(x = 10000, xend = 10000 , y = 9000, yend = 11000),
                      arrow = arrow(length = unit(0.2,"cm")), color = "red")
 
 ```
+```{r}
+rt3 <- rt2 %>% 
+  gather("RTParty", "Prop", 7:9) %>% 
+  select(screen_name, user_party, RTParty, Prop)
+
+
+# Democrats 
+d <- ggplot(data = filter(rt3, rt3$screen_name %in% freq_tweeters_d$screen_name), 
+       aes(x = 0, y = Prop, fill = RTParty)) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_fill_manual(values=c("blue", "yellow", "red"), labels = c("RT Democrat", "RT Independent", "RT Republican"), name = 'Parties of Retweets') +
+  coord_polar(theta = "y") +
+  labs(title = "Democrats") +
+  theme_void() +
+  theme(legend.position = "none") +
+  theme(strip.background = element_blank(),
+  strip.text.x = element_blank()) +
+  facet_wrap(~screen_name)
+  
+# Republicans 
+r <- ggplot(data = filter(rt3, rt3$screen_name %in% freq_tweeters_r$screen_name), 
+       aes(x = 0, y = Prop, fill = RTParty)) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_fill_manual(values=c("blue", "yellow", "red"), labels = c("RT Democrat", "RT Independent", "RT Republican"), name = 'Parties of Retweets') +
+  coord_polar(theta = "y") +
+  labs(title = "Republicans") +
+  theme_void() +
+  theme(legend.position = "none") +
+  theme(strip.background = element_blank(),
+  strip.text.x = element_blank()) +
+  facet_wrap(~screen_name)
+
+# Independents
+i <- ggplot(data = filter(rt3, rt3$screen_name %in% freq_tweeters_i$screen_name), 
+       aes(x = 0, y = Prop, fill = RTParty)) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_fill_manual(values=c("blue", "yellow", "red"), labels = c("RT Democrat", "RT Independent", "RT Republican"), name = 'Parties of Retweets') +
+  coord_polar(theta = "y") +
+  labs(title = "Independents") +
+  theme_void() +
+  theme(legend.position = "right") +
+  theme(strip.background = element_blank(),
+  strip.text.x = element_blank()) +
+  facet_wrap(~screen_name)
+
+source("../lib/multiplot.R")
+layout <- matrix(c(1, 1, 2, 2, 1,1,2,2,3,3,NA,NA), 3, 4, byrow = TRUE)
+multiplot(d, r, i, layout = layout)
+
+
+```
+```{r}
+
+```
+
+
+
 
 ### Identifying Mentions
 Identify the tweets in which one senator mentions another senator directly (the variable is mentions_screen_name). For this example, please remove simple re-tweets (is_retweet == FALSE). Calculate who re-tweets whom among the senate members. Convert the information to an undirected graph object in which the number of mentions is the strength of the relationship between senators. Visualize the network graph using the party identification of the senators as a group variable (use blue for Democrats and red for Republicans) and some graph centrality measure to size the nodes. Comment on what you can see from the visualization.
