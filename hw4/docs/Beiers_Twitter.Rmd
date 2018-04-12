@@ -49,12 +49,12 @@ freq_tweeters <- merge(freq_tweeters, twitter[, c("official_twitter", "party")],
 freq_tweeters_d <- freq_tweeters %>% 
   filter(party == "Democratic Party") %>% 
   arrange(desc(n_tweet)) %>% 
-  slice(1:20)
+  slice(1:42)
 
 freq_tweeters_r <- freq_tweeters %>% 
   filter(party == "Republican Party") %>% 
   arrange(desc(n_tweet)) %>% 
-  slice(1:20)
+  slice(1:42)
 
 freq_tweeters_i <- freq_tweeters %>% 
   filter(party == "Independent") %>% 
@@ -176,7 +176,8 @@ ggplot(data = mem, aes(x = party)) +
 sen_d3 <- igraph_to_networkD3(g, group = members)
 
 # Create force directed network plot
-forceNetwork(Links = sen_d3$links, Nodes = sen_d3$nodes, 
+forceNetwork(Links = sen_d3$links, 
+             Nodes = sen_d3$nodes, 
              Source = 'source', 
              Target = 'target', 
              NodeID = 'name', 
@@ -258,7 +259,7 @@ ggplot(data = tweets_time, aes(created_at, as.factor(hashtags))) +
                       aes(fill = party), alpha = 0.6, size = 0.2) +
   scale_fill_manual(values=c("blue","red"), name = "") +
   scale_y_discrete(labels=function(x) paste0("#", x)) +
-  theme_minimal() +
+  theme_ridges() +
   labs(x = '', y = '', title = 'Popular Hashtags by Political Party', 
        subtitle = 'Senator Tweets: 2016-2018 \n') +
   theme(legend.position = 'bottom') 
@@ -460,11 +461,11 @@ i <- ggplot(data = filter(rt3, rt3$screen_name %in% freq_tweeters_i$screen_name)
        aes(x = 0, y = Prop, fill = RTParty)) + 
   geom_bar(stat = "identity") +
   scale_x_continuous(expand = c(0,0)) +
-  scale_fill_manual(values=c("blue", "yellow", "red"), labels = c("RT Democrat", "RT Independent", "RT Republican"), name = 'Parties of Retweets') +
+  scale_fill_manual(values=c("blue", "yellow", "red"), labels = c("Democrat", "Independent", "Republican"), name = 'Parties of Retweets') +
   coord_polar(theta = "y") +
   labs(title = "Independents") +
   theme_void() +
-  theme(legend.position = "right") +
+  theme(legend.position = "right", legend.key.size = unit(0.5, "cm")) +
   theme(strip.background = element_blank(),
   strip.text.x = element_blank()) +
   facet_wrap(~screen_name)
@@ -475,23 +476,55 @@ multiplot(d, r, i, layout = layout)
 
 
 ```
-```{r}
-
-```
-
-
-
 
 ### Identifying Mentions
 Identify the tweets in which one senator mentions another senator directly (the variable is mentions_screen_name). For this example, please remove simple re-tweets (is_retweet == FALSE). Calculate who re-tweets whom among the senate members. Convert the information to an undirected graph object in which the number of mentions is the strength of the relationship between senators. Visualize the network graph using the party identification of the senators as a group variable (use blue for Democrats and red for Republicans) and some graph centrality measure to size the nodes. Comment on what you can see from the visualization.
 ```{r}
+mentions <- tweets %>% 
+  filter(is_retweet == FALSE) %>% 
+  unnest(mentions_screen_name) %>% 
+  filter(!is.na(mentions_screen_name)) %>% 
+  filter(mentions_screen_name %in% screen_name) %>% 
+  # group_by(screen_name, mentions_screen_name) %>% 
+  # mutate(n_mentions = n()) %>% 
+  # ungroup() %>% 
+  select(screen_name, mentions_screen_name, party)
 
+gr2 <- graph_from_data_frame(mentions[,c("screen_name", "mentions_screen_name")], 
+                            directed = FALSE)
+
+V(gr2)$size <- centralization.degree(gr2)$res
+E(gr2)$weight <- 1
+edges <- simplify(gr2, edge.attr.comb = "sum")
+mentions_network <- ggnetwork(edges, layout="fruchtermanreingold", 
+                arrow.gap =0, cell.jitter=0)
+# hacky write_csv & read in 
+write_csv(mentions_network,"mentions.csv")
+mentions_network <- read_csv("mentions.csv")
+mentions_network <- as_data_frame(mentions_network)
+# read in senator party 
+mentions_network <- merge(mentions_network, mentions[c("screen_name", "party")], by.x = "vertex.names", by.y = "screen_name")
+# rearrange
+mentions_network <- mentions_network %>% 
+select(x, y, na.x, size, vertex.names, xend, yend, na.y, weight, party)
+
+# graph 
+ggplot() +
+  geom_edges(data = mentions_network, 
+             aes(x = x, y = y, xend = xend, yend = yend),
+             color = "darkgrey", curvature = 0.1, size = 0.1, alpha = 0.5) +
+  geom_nodes(data= mentions_network,
+             aes(x = x, y = y, xend = xend, yend = yend, 
+                 color = party, size = sqrt(size)), alpha = 0.7) +
+  geom_label_repel(data = unique(mentions_network[mentions_network$size > 400, c(1, 2, 5)]),
+                   aes(x = x, y = y, label = vertex.names), 
+                    size = 2.5) +
+  scale_color_manual(values=c("blue", "yellow", "red"), name = '') +
+  theme_blank() +
+  theme(legend.position="none") 
 ```
 
-### Who is Popular on Twitter? 
-```{r}
 
-```
 
 
 
