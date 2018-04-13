@@ -1,12 +1,24 @@
 ---
-title: "Beiers_Twitter"
+title: "Twitter Analysis"
 author: "Sophie Beiers"
-date: "4/5/2018"
-output: html_document
+date: "4/12/2018"
+output: 
+  html_document:
+    keep_md: true
+    toc: true
+    theme: lumen
+    highlight: tango
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.path="../images/",
+               cache.path="cache/",
+               cache=FALSE,
+               echo=TRUE,
+               message=FALSE,
+               warning=FALSE,
+               eval = TRUE) 
 setwd("~/Documents/GitHub/Beiers_Sophie/hw4/docs")
 library(tidyverse)
 library(lubridate)
@@ -15,12 +27,12 @@ library(ggnetwork)
 library(intergraph)    
 library(ggrepel)      
 library(svgPanZoom)    
-# library(SVGAnnotation) 
 library(DT) 
 library(networkD3)
 library(ggthemes)
 library(ggridges)
 library(emojifont)
+library(knitr)
 ```
 
 # Tweets by US Senators
@@ -32,8 +44,6 @@ follows <- read_csv("../data/senators_follow.csv")
 twitter <- read_csv("../data/senators_twitter.csv")
 
 # How limiting is the API limit?
-
-# looking for most prolific democratic, republican and independent tweeters 
 freq_tweeters <- tweets %>% 
   group_by(screen_name) %>% 
   summarize(n_tweet = n(),
@@ -41,9 +51,11 @@ freq_tweeters <- tweets %>%
   arrange(desc(oldest_tweet)) %>% 
   ungroup()
 
+# changing col name for ease 
 twitter['official_twitter'] <- twitter['Official Twitter']
 twitter['party'] <- twitter['Party affiliation']
 
+# looking for most prolific dem, rep and independent tweeters
 freq_tweeters <- merge(freq_tweeters, twitter[, c("official_twitter", "party")], by.x = "screen_name", by.y = "official_twitter")
 
 freq_tweeters_d <- freq_tweeters %>% 
@@ -65,7 +77,9 @@ freq_tweeters_i <- freq_tweeters %>%
 
 ## Who Follows Whom?
 ### Network of Followers
-Visualize the network of senators. In the visualization, highlight the party ID of the senator nodes with an appropriate color (blue = Democrat, red = Republican) and size the nodes by the centrality of the nodes to the network. 
+First, I created two tables of the top followed Senators and the Senators who follow the most of their peers. Collins, McCain and Murkowski follow the most of their peers while Merkley, Warner and Kennedy are followed by their peers the most. 
+
+#### Senators Who Follow Most Other Senators
 ```{r}
 
 # get party info
@@ -83,27 +97,30 @@ net_follows <- follows %>%
 top_following <- net_follows %>% 
   arrange(desc(n_following)) %>% 
   slice(1:3)
+kable(top_following)
+```
 
-top_following$source 
+#### Senators Followed by Most Other Senators
+```{r}
 
 # the senators followed by the largest amount of their colleagues Merkley, Warner, Kennedy 
 top_followed_by <- net_follows %>% 
   arrange(desc(n_followed_by)) %>% 
   slice(1:3)
-
-top_followed_by$source
+kable(top_followed_by)
 
 ```
+
+#### Network Visualization
+Next, I visualized the network of senators and highlighted the party of each with blue = Democrat, yellow = Independent and red = Republican and sized the nodes by each senator's centrality to the network. Clearly, these Senators are quite intertwined! But, we can see a stark cutoff between red and blue indicating a separation amongst the two main parties. 
 ```{r}
 # data set-up 
 sub_following <- subset(follows, follows$following == 1)
 gr <- graph_from_data_frame(sub_following[,c("source", "target")], 
-                            directed = FALSE)
+                            directed = TRUE)
 
 V(gr)$size <- centralization.degree(gr)$res
-E(gr)$weight <- 1
-edges <- simplify(gr, edge.attr.comb="sum")
-connections <- ggnetwork(edges, layout="fruchtermanreingold", 
+connections <- ggnetwork(gr, layout="fruchtermanreingold", 
                 arrow.gap =0, cell.jitter=0)
 
 write_csv(connections,"connections.csv")
@@ -111,7 +128,7 @@ connections <- read_csv("connections.csv")
 connections <- dplyr::as_data_frame(connections)
 connections <- merge(connections, twitter[c("official_twitter", "party")], by.x = "vertex.names", by.y = "official_twitter")
 connections <- connections %>% 
-  select(x, y, na.x, size, vertex.names, xend, yend, na.y, weight, party)
+  select(x, y, na.x, size, vertex.names, xend, yend, na.y, party)
 connections$stars <- as.factor(ifelse(connections$vertex.names %in% top_followed_by$source, 1, 0))
 
 # visualizing network 
@@ -119,7 +136,7 @@ ggplot() +
   geom_edges(data = connections, 
              aes(x = x, y = y, xend = xend, yend = yend),
              color = "darkgrey", curvature = 0.1, size = 0.1, alpha = 0.5) +
-  geom_nodes(data=connections,
+  geom_nodes(data = connections,
              aes(x = x, y = y, xend = xend, yend = yend, 
                  color = party, size = sqrt(size)), alpha = 0.7) +
   geom_label_repel(data = unique(connections[connections$size > 100, c(1, 2, 5)]),
@@ -134,12 +151,11 @@ ggplot() +
 
 
 ### Communities
-Now let’s see whether party identification is also recovered by an automated mechanism of cluster identification. Use the cluster_walktrap command in the igraph package to find densely connected subgraphs.
+Next, let’s see whether party identification is also recovered by an automated mechanism of cluster identification. First, I clustered the senators using the cluster_walktrap function, and visualized how well these clusters identified the political parties of the senators. Clearly, it did a pretty good job. Cluster one was made entirely of Republicans while cluster two was made entirely of Democrats and Independents; these groups tend to go together more often than Independents and Republicans do, so I think this makes sense.  
 
-Based on the results, visualize how well this automated community detection mechanism recovers the party affiliation of senators. This visualization need not be a network graph. Comment briefly.
 ```{r}
 # find "communities/groups"
-wc <- cluster_walktrap(g)  
+wc <- cluster_walktrap(gr)  
 members <- membership(wc)
 
 # transform members into DF
@@ -170,10 +186,11 @@ ggplot(data = mem, aes(x = party)) +
        subtitle = "Same political parties clustered together")
   
 ```
-### Interactive For Fun
+
+#### Interactive Community Graph (For Fun)
 ```{r}
 # Convert igraph object to object suitable for networkD3
-sen_d3 <- igraph_to_networkD3(g, group = members)
+sen_d3 <- igraph_to_networkD3(gr, group = members)
 
 # Create force directed network plot
 forceNetwork(Links = sen_d3$links, 
@@ -192,8 +209,12 @@ forceNetwork(Links = sen_d3$links,
 
 
 ## What do they Tweet About?
-### Most Common Topics Over Time
+### Most Common Hashtags Over Time
+I visualized the most common hashtags used by senators overall in a bar chart below. Interestingly, "trumpcare" and "obamacare" are neck-in-neck in terms of first place. "Taxreform" comes next, a topic for which both parties likely tweeted quite differing opinions about. Other important tweets include "mepolitics", "netneutrality" and "dreamers"; all large and controversial recent political topics!
+
 ```{r}
+# twitter official color palette
+colors <- c("#0084b4", "#00aced", "#1dcaff", "#c0deed")
 # merge in party info 
 tweets <- merge(tweets, twitter[, c('party', 'official_twitter')], by.x = 'screen_name', by.y = 'official_twitter')
 # rid of tweets that are retweets
@@ -210,8 +231,8 @@ top_tweets <- tweets_clean %>%
   ungroup() %>% 
   slice(1:20)
 
-
-ggplot(data = top_tweets, aes(x = reorder(hashtags, n), y = n)) +
+# took a screenshot because the little twitter bird won't show up in html otherwise :) 
+g <- ggplot(data = top_tweets, aes(x = reorder(hashtags, n), y = n)) +
 geom_bar(stat = "identity", fill = "#00aced", alpha = 0.8) + 
   coord_flip() + theme_tufte() + 
   geom_text(aes(label = hashtags, x = hashtags, y = 1), hjust = 0,
@@ -224,12 +245,14 @@ geom_bar(stat = "identity", fill = "#00aced", alpha = 0.8) +
        title = "Top 20 Most Popular #Hashtags Over Time", 
        subtitle = "Number of times hashtag was used")
 
-# twitter official color palette
-colors <- c("#0084b4", "#00aced", "#1dcaff", "#c0deed")
+
 
 ```
+![](../images/g.png)
 
 ### Democrats v. Republicans
+Next, I visualized the top 15 most common hashtags used by senators, but this time by political party and overtime. We can see exactly when certain topics were more popular than others, and we can also see that republicans tend to tweet these hashtags more frequently than democrats. Some hashtags were *only* used by one party; for instance, #trumpcare and #goptaxscam was largely used by democrats (no surprise there). The hashtag #wv has been used most long-term, as we can see a steady stream of red and blue throughout 2016-2018.
+
 ```{r}
 # transform to date 
 tweets_clean$created_at <- as.POSIXct(strptime(tweets_clean$created_at, "%Y-%m-%d"))
@@ -259,7 +282,7 @@ ggplot(data = tweets_time, aes(created_at, as.factor(hashtags))) +
                       aes(fill = party), alpha = 0.6, size = 0.2) +
   scale_fill_manual(values=c("blue","red"), name = "") +
   scale_y_discrete(labels=function(x) paste0("#", x)) +
-  theme_ridges() +
+  theme_light() +
   labs(x = '', y = '', title = 'Popular Hashtags by Political Party', 
        subtitle = 'Senator Tweets: 2016-2018 \n') +
   theme(legend.position = 'bottom') 
@@ -268,6 +291,8 @@ ggplot(data = tweets_time, aes(created_at, as.factor(hashtags))) +
 ```
 
 ### Gun Control 1 -- Dem v. Rep
+To visualize the difference in gun related hashtags, I used a diverging lollipop chart. Because there were only two Independents in the dataset, I chose to eliminate them for this exercise. First, I identified the main hashtags used in support of gun control and the main hashtags used in support of gun rights and subset my data to only look at those hashtags. We can see that gun control hashtags like #nationalwalkoutday and #gunreformnow are most commonly used by democrats while hashtags like #secondamendment and #freedom are used by republicans. In general, it seems that democrats voice their opinions on guns more frequently than republicans. 
+
 ```{r}
 # list of hashtags related to gun control and gun rights
 guncontrol <- c("guncontrolnow", "gunsense", "time", "commonsense", "gunviolence", "marchforourlives", "gunreform", "nationalwalkoutday", "enoughisenough", "gunreformnow")
@@ -284,8 +309,8 @@ gun_tweets <- sub_tweets %>%
 gun_tweets$n <- ifelse(gun_tweets$party == "Republican Party", gun_tweets$n * -1, gun_tweets$n)
 
 
-# diverging lolipop chart
-ggplot(data = gun_tweets, 
+# diverging lolipop chart, uploading screenshot so the little bird appears!
+g2 <- ggplot(data = gun_tweets, 
        aes(x = reorder(hashtags, n), 
            y = n)) + 
   geom_point(stat="identity",  size = 3, aes(col = party))   + 
@@ -306,10 +331,12 @@ ggplot(data = gun_tweets,
   theme(axis.ticks = element_blank()) +
   theme(legend.position = "bottom")
 ```
+![](../images/g2.png)
 
 ### Gun Control 2 -- Parkland Shooting
 
-To look into how senators reacted to the Parkland shooting, I narrowed the time-range for tweets to one month after the shooting. 
+To look into how senators reacted specifically to the Parkland shooting, I narrowed the time-range for tweets to one month after the shooting, and, for simplicity sake, only looked at Democrats vs. Republicans once again. Again, I visualized the use of these hashtags over the month long period so we can take a look at exactly when certain hashtags were popular. Clearly, democrats were tweeting more about the shooting than were republicans, yet republicans tended to tweet more about the "facts" (i.e. #parklandshooting and #florida) whereas democrats tweeted more about the student-led march and ending gun violence. 
+
 ```{r guncontrol2}
 # identified hashtags used during the month after Parkland shooting related to Parkland
 parkland_tweets <- subset(tweets_clean, created_at >= "2018-02-14" & created_at <= "2018-03-15")
@@ -351,7 +378,8 @@ ggplot(data = parkland_time, aes(created_at, as.factor(hashtags))) +
 
 ## Are You Talking to Me?
 ### Identifying Re-Tweets
-Often tweets are simply public statements without addressing a specific audience. However, it is possible to interact with a specific person by adding them as a friend, becoming their follower, re-tweeting their messages, and/or mentioning them in a tweet using the @ symbol. Select the set of re-tweeted messages from other senators and identify the source of the originating message. Calculate by senator the amount of re-tweets they received and from which party these re-tweets came. Essentially, I would like to visualize whether senators largely re-tweet their own party colleagues’ messages or whether there are some senators that get re-tweeted on both sides of the aisle. Visualize the result.
+I selected the set of re-tweeted messages from other senators and identified the source of the originating message. Then, I calculated by senator the amount of re-tweets they received and from which party these re-tweets came. I created a scale of tweeting republicans vs. independents and then retweeting democrats vs. independents such that the more right the senator appears on the grid, the more democrats he/she retweeted, the more "up" he/she appears on the graph the more republicans he/she retweeted and the more left or down he/she appears on the grid, the more independents he/she has retweeted. The color of the dots indicate the party of the senator, not the party of the retweeted senator. In visualizing these relationships, I found that senators largely re-tweet their own party colleagues’ messages.
+
 ```{r}
 retweets <- tweets %>% 
   filter(is_retweet == TRUE)
@@ -398,7 +426,7 @@ ggplot(data = rt2, aes(x = Ind.Dem, y = Ind.Rep, color = user_party)) +
   theme_minimal()+
   theme(legend.position = "right") +
   labs(x = '', y = '', title = 'Senators Largely Retweet Own Party', subtitle = '') +
-  geom_label_repel(data = test2[test2$Republican > 6000|test2$Democrat > 6000|test2$Independent < -500,],
+  geom_label_repel(data = rt2[rt2$Republican > 6000|rt2$Democrat > 6000|rt2$Independent < -500,],
                    aes(label = screen_name), 
                     size = 2, color = "black") +
   ggplot2::annotate(geom = "text", x = 12500, y = 10000,  # right arrow
@@ -422,6 +450,9 @@ ggplot(data = rt2, aes(x = Ind.Dem, y = Ind.Rep, color = user_party)) +
                      arrow = arrow(length = unit(0.2,"cm")), color = "red")
 
 ```
+
+As a follow up, I chose to visualize this phenomenon once more through many small pie charts. The pie charts indicate the percentage of times a senator retweeted a particular party. We can see that democratic pie charts are mainly blue, republican pie charts are mainly red and independents are primarily blue and slightly yellow, though are a bit more balanced than the republican and democratic senator in terms of who they retweet. 
+
 ```{r}
 rt3 <- rt2 %>% 
   gather("RTParty", "Prop", 7:9) %>% 
@@ -478,7 +509,8 @@ multiplot(d, r, i, layout = layout)
 ```
 
 ### Identifying Mentions
-Identify the tweets in which one senator mentions another senator directly (the variable is mentions_screen_name). For this example, please remove simple re-tweets (is_retweet == FALSE). Calculate who re-tweets whom among the senate members. Convert the information to an undirected graph object in which the number of mentions is the strength of the relationship between senators. Visualize the network graph using the party identification of the senators as a group variable (use blue for Democrats and red for Republicans) and some graph centrality measure to size the nodes. Comment on what you can see from the visualization.
+I then identified the tweets in which one senator mentions another senator directly and removed simple re-tweets. Then, I calculated who mentions whom among the senate members. I converted the information to an undirected graph object in which the number of mentions is the strength of the relationship between senators. I then visualized the network graph using the party identification of the senators as a group variable and centrality to size the nodes. From this visualization, we can once again see just how close knit this group is yet how separate they are in terms of party belongingness. We see a few more spread out nodes than we did in the first network graph indicating a bit more distance; it really does seem like overall, democrats and republicans stick to mentioning their respective parties. 
+
 ```{r}
 mentions <- tweets %>% 
   filter(is_retweet == FALSE) %>% 
@@ -497,11 +529,11 @@ V(gr2)$size <- centralization.degree(gr2)$res
 E(gr2)$weight <- 1
 edges <- simplify(gr2, edge.attr.comb = "sum")
 mentions_network <- ggnetwork(edges, layout="fruchtermanreingold", 
-                arrow.gap =0, cell.jitter=0)
+                arrow.gap = 0, cell.jitter = 0)
 # hacky write_csv & read in 
 write_csv(mentions_network,"mentions.csv")
 mentions_network <- read_csv("mentions.csv")
-mentions_network <- as_data_frame(mentions_network)
+mentions_network <- as.data.frame(mentions_network)
 # read in senator party 
 mentions_network <- merge(mentions_network, mentions[c("screen_name", "party")], by.x = "vertex.names", by.y = "screen_name")
 # rearrange
